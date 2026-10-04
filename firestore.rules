@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// ログインできるのは許可リストの3人だけ。
+// web/src/config.ts と functions/src/config.ts の ALLOWED と同じ内容にしておくこと。
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'sinpooh@urukau-ichioshi.com',
+          'omochi.mochi0567@gmail.com',
+          'sinpooh.recycle@gmail.com'
+        ];
+    }
+
+    match /members/{id} { allow read, write: if allowed(); }
+    match /cards/{id} { allow read, write: if allowed(); }
+    match /praises/{id} { allow read, write: if allowed(); }
+    match /settings/app { allow read, write: if allowed(); }
+
+    // サーバ（Cloud Functions）だけが書く
+    match /oneToOnes/{id} { allow read: if allowed(); }
+    match /settings/calendar { allow read: if allowed(); }
+
+    match /users/{uid} {
+      allow read: if allowed();
+      allow write: if allowed() && request.auth.uid == uid;
+    }
+
+    // カレンダーの合鍵など。端末からは読めない
+    match /private/{doc=**} { allow read, write: if false; }
+    match /state/{doc=**} { allow read, write: if false; }
+  }
+}

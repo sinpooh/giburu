@@ -1,0 +1,11 @@
+node_modules/
+dist/
+lib/
+.env
+.env.*
+!.env.example
+*.log
+.firebase/
+.secret.local
+firestore-debug.log
+firebase-debug.log

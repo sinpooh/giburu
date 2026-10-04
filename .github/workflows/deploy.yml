@@ -1,0 +1,46 @@
+name: Deploy
+
+# main に入ったら Firebase に公開する。Actions 画面の「Run workflow」からも手で実行できる
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: giburu-178f1
+  # scripts/setup-cloud.sh の最後に出る番号（プロジェクト番号）
+  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: web
+      - run: npm ci
+        working-directory: functions
+      - run: npm test
+        working-directory: functions
+      - run: npm run build
+        working-directory: web
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ env.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github/providers/github
+          service_account: github-deploy@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+      - name: Deploy to Firebase
+        run: |
+          # 初回は権限の反映待ちで失敗することがあるので1回だけやり直す
+          npx --yes firebase-tools@15 deploy --project "$PROJECT_ID" --non-interactive --force \
+            || (sleep 60 && npx --yes firebase-tools@15 deploy --project "$PROJECT_ID" --non-interactive --force)
