@@ -16,8 +16,8 @@ concurrency:
 
 env:
   PROJECT_ID: giburu-178f1
-  # scripts/setup-cloud.sh の最後に出る番号（プロジェクト番号）
-  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER }}
+  # プロジェクト番号（scripts/setup-cloud.sh の最後にも表示される）
+  PROJECT_NUMBER: "667591131197"
 
 jobs:
   deploy:
