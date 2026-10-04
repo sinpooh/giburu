@@ -28,6 +28,12 @@ for r in roles/editor roles/firebase.admin roles/cloudfunctions.admin roles/run.
   gcloud projects add-iam-policy-binding $PROJECT --member="serviceAccount:$SA" --role=$r --condition=None -q >/dev/null
 done
 
+echo "▶ 関数を動かすアカウント（新しいプロジェクトは権限が空なので足す）"
+NUM0=$(gcloud projects describe $PROJECT --format='value(projectNumber)')
+for r in roles/editor roles/cloudbuild.builds.builder; do
+  gcloud projects add-iam-policy-binding $PROJECT --member="serviceAccount:${NUM0}-compute@developer.gserviceaccount.com" --role=$r --condition=None -q >/dev/null
+done
+
 echo "▶ GitHubとの連携"
 gcloud iam workload-identity-pools describe github --location=global >/dev/null 2>&1 \
   || gcloud iam workload-identity-pools create github --location=global --display-name=GitHub
