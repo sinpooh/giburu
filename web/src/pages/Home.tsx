@@ -189,8 +189,13 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
       {msg && <p className="center notice">{msg}</p>}
 
       {isAoyama && (
-        <button className="btn ghost wide" onClick={() => setAdding(true)}>
-          ＋ LINE返信あとで
+        <button className="line-add" onClick={() => setAdding(true)}>
+          <span className="line-add-icon">LINE</span>
+          <span className="line-add-text">
+            <b>LINE返信あとで</b>
+            <small>文面は店長が用意します</small>
+          </span>
+          <span className="line-add-plus">＋</span>
         </button>
       )}
       {adding && (

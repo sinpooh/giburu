@@ -227,6 +227,55 @@ textarea {
 .wide {
   width: 100%;
 }
+/* 「LINE返信あとで」ボタン（LINEの緑で目立たせる） */
+.line-add {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: none;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #06c755, #04a948);
+  color: #fff;
+  text-align: left;
+  box-shadow: 0 6px 16px rgba(6, 199, 85, 0.35);
+}
+.line-add:active {
+  transform: scale(0.98);
+}
+.line-add-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #fff;
+  color: #06c755;
+  font-weight: 900;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+.line-add-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.line-add-text b {
+  font-size: 1.2rem;
+}
+.line-add-text small {
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+.line-add-plus {
+  flex: none;
+  font-size: 1.8rem;
+  font-weight: 900;
+}
 .link-btn {
   border: none;
   background: none;
