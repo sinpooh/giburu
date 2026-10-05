@@ -80,7 +80,7 @@ function Shell({ me }: { me: Me }) {
         </button>
       )}
       <main>
-        {tab === "home" && <Home me={me} goSchedule={() => setTab("schedule")} goSettings={() => setTab("settings")} />}
+        {tab === "home" && <Home me={me} readOnly={me.role === "viewer"} goSchedule={() => setTab("schedule")} goSettings={() => setTab("settings")} />}
         {tab === "schedule" && <Schedule />}
         {tab === "members" && <Members />}
         {tab === "settings" && <Settings me={me} calendarResult={calendarResult} />}

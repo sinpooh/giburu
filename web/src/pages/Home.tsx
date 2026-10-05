@@ -140,7 +140,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
 
   return (
     <div className="page">
-      {!readOnly && <Bubble mood={mood}>{top ? greeting(now, settings.smokeTimes) : "今日はもう全部終わり！最高！🎉"}</Bubble>}
+      {(!readOnly || me.role === "viewer") && <Bubble mood={mood}>{top ? greeting(now, settings.smokeTimes) : "今日はもう全部終わり！最高！🎉"}</Bubble>}
 
       {setupTodo.length > 0 && (
         <div className="setup">

@@ -1,10 +1,10 @@
 // ログイン許可リスト。firestore.rules と functions/src/config.ts と同じ内容にしておくこと。
-export type Role = "aoyama" | "manager";
+export type Role = "aoyama" | "manager" | "viewer"; // viewer = 青山さんと同じ画面を見るだけ
 
 export const ALLOWED: Record<string, { role: Role; name: string; notifyManager: boolean }> = {
   "sinpooh@urukau-ichioshi.com": { role: "manager", name: "シンプー", notifyManager: true },
   "omochi.mochi0567@gmail.com": { role: "aoyama", name: "青山", notifyManager: false },
-  "sinpooh.recycle@gmail.com": { role: "manager", name: "渡辺", notifyManager: false },
+  "sinpooh.recycle@gmail.com": { role: "viewer", name: "渡辺", notifyManager: false },
 };
 
 export const AOYAMA_EMAIL = Object.keys(ALLOWED).find((k) => ALLOWED[k].role === "aoyama")!;
