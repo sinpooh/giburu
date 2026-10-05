@@ -1,8 +1,8 @@
 // ログイン許可リスト。firestore.rules と web/src/config.ts と同じ内容にしておくこと。
-export type Role = "aoyama" | "manager" | "viewer"; // viewer = 青山さんと同じ画面・同じ操作・同じ通知（渡辺さん）
+export type Role = "aoyama" | "manager" | "viewer"; // viewer = 青山さんと同じ画面・同じ操作・同じ通知（シンプーさん・渡辺さん。2026-10-05 見守り画面はいったん使わない）
 
 export const ALLOWED: Record<string, { role: Role; name: string; notifyManager: boolean }> = {
-  "sinpooh@urukau-ichioshi.com": { role: "manager", name: "シンプー", notifyManager: true },
+  "sinpooh@urukau-ichioshi.com": { role: "viewer", name: "シンプー", notifyManager: true },
   "omochi.mochi0567@gmail.com": { role: "aoyama", name: "青山", notifyManager: false },
   "sinpooh.recycle@gmail.com": { role: "viewer", name: "渡辺", notifyManager: false },
 };
