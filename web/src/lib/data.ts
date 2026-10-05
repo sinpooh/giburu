@@ -1,6 +1,7 @@
 import { addDoc, collection, doc, query, serverTimestamp, Timestamp, updateDoc, where } from "firebase/firestore";
 import { call, db } from "../firebase";
 import { startOfMonth, startOfNextMonth } from "./time";
+import { lineUrlFor } from "./replies";
 
 export interface Slot {
   start: string;
@@ -84,6 +85,21 @@ export function addTask(t: { type: "request" | "lineReply"; title: string; detai
     title: t.title,
     detail: t.detail ?? "",
     dueAt: t.dueAt ? Timestamp.fromMillis(t.dueAt) : null,
+    createdBy: t.byUid,
+    createdByName: t.byName,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export function addLineReply(t: { name: string; lineText: string; dueAt: number; byName: string; byUid: string }) {
+  return addDoc(collection(db, "cards"), {
+    type: "lineReply",
+    status: "open",
+    title: `${t.name}さんにLINE返信`,
+    sub: t.lineText ? "返信の文面、用意しときました" : "",
+    lineText: t.lineText,
+    lineUrl: lineUrlFor(t.lineText),
+    dueAt: Timestamp.fromMillis(t.dueAt),
     createdBy: t.byUid,
     createdByName: t.byName,
     createdAt: serverTimestamp(),

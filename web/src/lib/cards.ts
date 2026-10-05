@@ -53,5 +53,5 @@ export const CARD_META: Record<CardType, { label: string; right: string; left: s
   tomorrow: { label: "明日の1to1", right: "OK", left: "予定を見る" },
   thanks: { label: "お礼", right: "LINEでお礼", left: "あとで" },
   request: { label: "シンプーさんからのお願い", right: "完了", left: "あとで" },
-  lineReply: { label: "LINE返信あとで", right: "返信した", left: "あとで" },
+  lineReply: { label: "LINE返信", right: "LINEで返信", left: "あとで" },
 };

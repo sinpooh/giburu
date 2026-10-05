@@ -3,13 +3,14 @@ import { collection, doc, query, updateDoc, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { Me, isIOS, isStandalone, useDoc, useNow, useQuery, useSettings } from "../lib/hooks";
 import { CARD_META, Card, sortCards } from "../lib/cards";
-import { OneToOne, REASONS, activeOneToOnesQuery, addTask, api, finishCard, monthStats, openCardsQuery, snoozeCard } from "../lib/data";
+import { OneToOne, REASONS, activeOneToOnesQuery, addLineReply, api, finishCard, monthStats, openCardsQuery, snoozeCard } from "../lib/data";
 import { fmtCountdown, jst, nextSmokeTime } from "../lib/time";
 import { Bubble, Character, Mood } from "../components/Character";
 import { Meter } from "../components/Meter";
 import { SwipeCard } from "../components/SwipeCard";
 import { Confetti, usePraise } from "../components/Praise";
-import { TaskForm } from "../components/TaskForm";
+import { LineReplyForm } from "../components/LineReplyForm";
+import { lineUrlFor } from "../lib/replies";
 import { pushState } from "../lib/push";
 
 function greeting(now: number, smokeTimes: string[]): string {
@@ -71,6 +72,11 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
         break;
       case "thanks":
         openLine(c.lineUrl);
+        finishCard(c.id);
+        praise();
+        break;
+      case "lineReply":
+        openLine(c.lineUrl ?? lineUrlFor(c.lineText ?? ""));
         finishCard(c.id);
         praise();
         break;
@@ -187,12 +193,10 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
         </button>
       )}
       {adding && (
-        <TaskForm
-          title="LINE返信あとで"
-          placeholder="だれに返信？（例：山田さん）"
+        <LineReplyForm
           onCancel={() => setAdding(false)}
           onSubmit={async (v) => {
-            await addTask({ type: "lineReply", title: `${v.title}にLINE返信`, dueAt: v.dueAt, byName: me.name, byUid: me.user.uid });
+            await addLineReply({ ...v, byName: me.name, byUid: me.user.uid });
             setAdding(false);
             praise("覚えときます！あとは任せて");
           }}
@@ -207,6 +211,7 @@ function CardBody({ card, now, open, onToggle }: { card: Card; now: number; open
   const due = card.dueAt?.toMillis();
   const left = due ? due - now : null;
   const [copied, setCopied] = useState(false);
+  open = open || card.type === "lineReply"; // LINE返信は文面を最初から見せる
   return (
     <div className="card-body" onClick={onToggle}>
       <div className="row between">
@@ -217,7 +222,7 @@ function CardBody({ card, now, open, onToggle }: { card: Card; now: number; open
       <h2 className="card-title">{card.title}</h2>
       {card.sub && <p className="muted">{card.sub}</p>}
       {card.hint && <p className="hint">💡 {card.hint}</p>}
-      {card.createdByName && <p className="muted small">{card.createdByName}さんから</p>}
+      {card.createdByName && card.type !== "lineReply" && <p className="muted small">{card.createdByName}さんから</p>}
       {card.slots && (
         <div className="slots">
           {card.slots.map((s) => (

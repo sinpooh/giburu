@@ -522,7 +522,9 @@ export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/T
         await top.ref.update({ nudged: true });
         await push("aoyama", "店長シンプー", `「${top.title}」今日までだよ〜。スワイプ1回で終わるよ`, `/?card=${top.id}`);
       } else {
-        await push("aoyama", "一服タイム☕", `今日の1枚：${top.title}（スワイプ1回）`, `/?card=${top.id}`);
+        const lines = cards.filter((c) => c.type === "lineReply" && c.id !== top.id && (!c.snoozedUntil || c.snoozedUntil <= now.getTime())).length;
+        const extra = lines ? `／LINE返信もあと${lines}件` : "";
+        await push("aoyama", "一服タイム☕", `今日の1枚：${top.title}（スワイプ1回）${extra}`, `/?card=${top.id}`);
       }
     }
   }
