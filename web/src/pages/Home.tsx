@@ -43,15 +43,16 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
   const sorted = useMemo(() => sortCards(cards ?? [], now), [cards, now]);
   const top = sorted[0];
   const stats = monthStats(ones, now);
-  const isAoyama = me.role === "aoyama" && !readOnly;
+  // 渡辺さん（viewer）も青山さんと同じ操作ができる。褒めの表示だけは青山さん本人に出す
+  const isAoyama = (me.role === "aoyama" || me.role === "viewer") && !readOnly;
 
   // シンプーさんからの「褒める」を表示
   useEffect(() => {
-    if (!isAoyama || !praises || praises.length === 0) return;
+    if (!isAoyama || me.role !== "aoyama" || !praises || praises.length === 0) return;
     const p = praises[0];
     celebrate({ title: `${p.byName}さんから👏`, sub: p.text });
     updateDoc(doc(db, "praises", p.id), { seen: true }).catch(console.error);
-  }, [praises, isAoyama, celebrate]);
+  }, [praises, isAoyama, me.role, celebrate]);
 
   useEffect(() => setOpen(false), [top?.id]);
 
@@ -130,7 +131,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
   const setupTodo: { text: string; action?: () => void }[] = [];
   if (isAoyama) {
     if (isIOS() && !isStandalone()) setupTodo.push({ text: "Safariの共有ボタン →「ホーム画面に追加」をしてね（通知に必要）" });
-    if (calendar && !calendar.connected) setupTodo.push({ text: "Googleカレンダーをつなぐ", action: goSettings });
+    if (me.role === "aoyama" && calendar && !calendar.connected) setupTodo.push({ text: "Googleカレンダーをつなぐ", action: goSettings });
     if (isStandalone() && pushState() === "default") setupTodo.push({ text: "通知をONにする", action: goSettings });
   }
 
@@ -140,7 +141,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
 
   return (
     <div className="page">
-      {(!readOnly || me.role === "viewer") && <Bubble mood={mood}>{top ? greeting(now, settings.smokeTimes) : "今日はもう全部終わり！最高！🎉"}</Bubble>}
+      {!readOnly && <Bubble mood={mood}>{top ? greeting(now, settings.smokeTimes) : "今日はもう全部終わり！最高！🎉"}</Bubble>}
 
       {setupTodo.length > 0 && (
         <div className="setup">

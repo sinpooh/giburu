@@ -74,13 +74,13 @@ function Shell({ me }: { me: Me }) {
 
   return (
     <div className="app">
-      {me.role === "aoyama" && tab === "home" && (
+      {me.role !== "manager" && tab === "home" && (
         <button className="gear" onClick={() => setTab("settings")} aria-label="設定">
           ⚙
         </button>
       )}
       <main>
-        {tab === "home" && <Home me={me} readOnly={me.role === "viewer"} goSchedule={() => setTab("schedule")} goSettings={() => setTab("settings")} />}
+        {tab === "home" && <Home me={me} goSchedule={() => setTab("schedule")} goSettings={() => setTab("settings")} />}
         {tab === "schedule" && <Schedule />}
         {tab === "members" && <Members />}
         {tab === "settings" && <Settings me={me} calendarResult={calendarResult} />}

@@ -6,10 +6,11 @@ import { appUrl } from "./config";
 
 type Target = "aoyama" | "managerNotify" | "managers";
 
+// "aoyama" は青山さんと、同じ画面を使う渡辺さん（viewer）にも届く
 export async function push(target: Target, title: string, body: string, path = "/"): Promise<number> {
   const snap = await getFirestore()
     .collection("users")
-    .where("role", "==", target === "aoyama" ? "aoyama" : "manager")
+    .where("role", "in", target === "aoyama" ? ["aoyama", "viewer"] : ["manager"])
     .get();
   const docs = snap.docs.filter((u) => target !== "managerNotify" || u.get("notifyManager"));
   return sendTo(docs, title, body, path);

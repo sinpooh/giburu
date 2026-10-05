@@ -61,10 +61,13 @@ export function Settings({ me, calendarResult }: { me: Me; calendarResult?: stri
         ) : (
           <p className="muted">まだつながっていません。青山さんのGoogleアカウントで許可してください。</p>
         )}
-        <button className="btn primary" disabled={busy} onClick={connectCalendar}>
-          {cal?.connected ? "つなぎ直す" : "カレンダーをつなぐ"}
-        </button>
-        {!cal?.connected && <p className="muted small">「このアプリは Google で確認されていません」と出たら「詳細」→「ギブる（安全ではないページ）に移動」で進んでOKです（ギブるは青山さん専用なので審査を受けていないだけです）。</p>}
+        {/* 別のアカウントでつなぎ直すと青山さんの予定が見えなくなるので、渡辺さんにはボタンを出さない */}
+        {me.role !== "viewer" && (
+          <button className="btn primary" disabled={busy} onClick={connectCalendar}>
+            {cal?.connected ? "つなぎ直す" : "カレンダーをつなぐ"}
+          </button>
+        )}
+        {me.role !== "viewer" && !cal?.connected && <p className="muted small">「このアプリは Google で確認されていません」と出たら「詳細」→「ギブる（安全ではないページ）に移動」で進んでOKです（ギブるは青山さん専用なので審査を受けていないだけです）。</p>}
       </section>
 
       <section className="box">
