@@ -40,7 +40,7 @@ export function Login({ error }: { error: string }) {
           <li>
             右上の<b>「追加」</b>をタップ
           </li>
-          <li>ホーム画面にできた店長アイコンから開き直す</li>
+          <li>ホーム画面にできたギブるのアイコンから開き直す</li>
         </ol>
         <button className="link-btn" onClick={() => setSkipInstall(true)}>
           あとでやる（このままログイン）

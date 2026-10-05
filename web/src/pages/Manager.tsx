@@ -12,7 +12,7 @@ import { Home } from "./Home";
 
 const QUICK_PRAISE = ["さすが青山さん！", "いつもありがとう！", "今月いい感じ！", "その調子！応援してます"];
 
-/** 店長モードの「見守り」 */
+/** シンプーさん用の「見守り」画面 */
 export function Watch({ me }: { me: Me }) {
   const now = useNow(30000);
   const settings = useSettings();
@@ -31,7 +31,7 @@ export function Watch({ me }: { me: Me }) {
     <div className="page">
       <div className="row gap center-y">
         <Character mood="normal" size={56} />
-        <h1>店長モード</h1>
+        <h1>見守り</h1>
       </div>
 
       <button className="box dashed left-text" onClick={() => setMode("screen")}>
