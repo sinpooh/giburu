@@ -1,0 +1,30 @@
+name: Function errors
+
+# 関数のエラーログ（直近2時間・エラーのみ・メッセージ先頭だけ）を表示する。原因調査用に手で実行する
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: giburu-178f1
+  PROJECT_NUMBER: "667591131197"
+
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ env.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github/providers/github
+          service_account: github-deploy@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Show recent errors
+        run: |
+          gcloud logging read \
+            'resource.type="cloud_run_revision" AND severity>=WARNING AND timestamp>="'"$(date -u -d '-2 hours' +%Y-%m-%dT%H:%M:%SZ)"'"' \
+            --project "$PROJECT_ID" --limit 30 \
+            --format='value(timestamp,resource.labels.service_name,severity,textPayload,jsonPayload.message)' \
+            | cut -c1-400
