@@ -16,10 +16,22 @@ const FIELDS: [keyof Member, string, string][] = [
   ["memo", "メモ", "text"],
 ];
 
-export function Members() {
+/** 取り込み用リンク（…/#members=<CSVをbase64url>）で渡されたメンバー一覧。# 以降はサーバーに送られない */
+export function csvFromHash(): string {
+  const m = location.hash.match(/^#members=([A-Za-z0-9_-]+)/);
+  if (!m) return "";
+  try {
+    const b = atob(m[1].replace(/-/g, "+").replace(/_/g, "/"));
+    return new TextDecoder().decode(Uint8Array.from(b, (c) => c.charCodeAt(0)));
+  } catch {
+    return "";
+  }
+}
+
+export function Members({ initialCsv = "" }: { initialCsv?: string }) {
   const rows = useQuery<Member>(collection(db, "members"));
   const [edit, setEdit] = useState<Partial<Member> | null>(null);
-  const [importing, setImporting] = useState(false);
+  const [importing, setImporting] = useState(!!initialCsv);
   const list = [...(rows ?? [])].sort((a, b) => a.name.localeCompare(b.name, "ja"));
 
   return (
@@ -51,7 +63,8 @@ export function Members() {
         </button>
       ))}
       {edit && <MemberForm m={edit} onClose={() => setEdit(null)} />}
-      {importing && <CsvImport existing={list} onClose={() => setImporting(false)} />}
+      {/* 今いるメンバーを読み終えてから開く（同じ人を二重に追加しないため） */}
+      {importing && rows !== null && <CsvImport existing={list} initialText={initialCsv} onClose={() => setImporting(false)} />}
     </div>
   );
 }
@@ -109,8 +122,8 @@ function MemberForm({ m, onClose }: { m: Partial<Member>; onClose: () => void })
   );
 }
 
-function CsvImport({ existing, onClose }: { existing: Member[]; onClose: () => void }) {
-  const [text, setText] = useState("");
+function CsvImport({ existing, initialText = "", onClose }: { existing: Member[]; initialText?: string; onClose: () => void }) {
+  const [text, setText] = useState(initialText);
   const [overwrite, setOverwrite] = useState(true);
   const [done, setDone] = useState("");
   const parsed = csvToMembers(text);

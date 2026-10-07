@@ -8,7 +8,7 @@ import { Character } from "./components/Character";
 import { Login } from "./pages/Login";
 import { Home } from "./pages/Home";
 import { Schedule } from "./pages/Schedule";
-import { Members } from "./pages/Members";
+import { Members, csvFromHash } from "./pages/Members";
 import { Settings } from "./pages/Settings";
 import { Watch } from "./pages/Manager";
 import { Booking } from "./pages/Booking";
@@ -54,9 +54,20 @@ type Tab = "home" | "schedule" | "members" | "settings" | "watch";
 function Shell({ me }: { me: Me }) {
   const params = new URLSearchParams(location.search);
   const calendarResult = params.get("calendar") ?? undefined;
-  const [tab, setTab] = useState<Tab>(calendarResult ? "settings" : me.role === "manager" ? "watch" : "home");
+  const [importCsv, setImportCsv] = useState(csvFromHash);
+  const [tab, setTab] = useState<Tab>(importCsv ? "members" : calendarResult ? "settings" : me.role === "manager" ? "watch" : "home");
   useEffect(() => {
-    if (location.search) history.replaceState(null, "", "/");
+    if (location.search || location.hash) history.replaceState(null, "", "/");
+    // 開いたままのタブで取り込み用リンクを開いたとき
+    const onHash = () => {
+      const csv = csvFromHash();
+      if (!csv) return;
+      history.replaceState(null, "", "/");
+      setImportCsv(csv);
+      setTab("members");
+    };
+    addEventListener("hashchange", onHash);
+    return () => removeEventListener("hashchange", onHash);
   }, []);
 
   const tabs: [Tab, string][] =
@@ -82,7 +93,7 @@ function Shell({ me }: { me: Me }) {
       <main>
         {tab === "home" && <Home me={me} goSchedule={() => setTab("schedule")} goSettings={() => setTab("settings")} />}
         {tab === "schedule" && <Schedule />}
-        {tab === "members" && <Members />}
+        {tab === "members" && <Members key={importCsv.length} initialCsv={importCsv} />}
         {tab === "settings" && <Settings me={me} calendarResult={calendarResult} />}
         {tab === "watch" && <Watch me={me} />}
       </main>
