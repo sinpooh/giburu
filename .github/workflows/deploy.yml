@@ -52,5 +52,5 @@ jobs:
           for s in $(gcloud run services list --project "$PROJECT_ID" --region asia-northeast1 --format='value(metadata.name)'); do
             gcloud run services add-iam-policy-binding "$s" --project "$PROJECT_ID" --region asia-northeast1 \
               --member=allUsers --role=roles/run.invoker --quiet >/dev/null 2> err.txt \
-              && echo "::notice::ok $s" || echo "::warning::$s: $(head -c 300 err.txt)"
+              && echo "::notice::ok $s" || echo "::warning::$s: $(tr "\n" " " < err.txt | tail -c 600)"
           done
