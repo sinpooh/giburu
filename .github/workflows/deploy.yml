@@ -44,3 +44,13 @@ jobs:
           # 初回は権限の反映待ちで失敗することがあるので1回だけやり直す
           npx --yes firebase-tools@15 deploy --project "$PROJECT_ID" --non-interactive --force \
             || (sleep 60 && npx --yes firebase-tools@15 deploy --project "$PROJECT_ID" --non-interactive --force)
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Allow the app to call the functions
+        run: |
+          # アプリや相手用ページから関数を呼べるようにする（ログインや合言葉の確認は関数の中でしている）。
+          # firebase deploy がこの設定をできなかった場合に備えて毎回付け直す（2026-10-07 シンプーさん了承）
+          for s in $(gcloud run services list --project "$PROJECT_ID" --region asia-northeast1 --format='value(metadata.name)'); do
+            gcloud run services add-iam-policy-binding "$s" --project "$PROJECT_ID" --region asia-northeast1 \
+              --member=allUsers --role=roles/run.invoker --quiet >/dev/null 2> err.txt \
+              && echo "::notice::ok $s" || echo "::warning::$s: $(head -c 300 err.txt)"
+          done
