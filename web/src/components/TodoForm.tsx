@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { TASK_LABEL, TaskKind, TaskSummary, api } from "../lib/data";
+import { collection } from "firebase/firestore";
+import { db } from "../firebase";
+import { useQuery } from "../lib/hooks";
+import { Member, TASK_LABEL, TaskKind, TaskSummary, api } from "../lib/data";
+import { localSummary } from "../lib/replies";
+
+// AIでまとめるか（Google CloudでClaudeを有効にしたら true にする。2026-10-10 シンプーさん「とりあえずAIなし」）
+const USE_AI = false;
 import { Character } from "./Character";
 
 const EMPTY: TaskSummary = { title: "", who: "", due: "", todo: [], reply: "" };
@@ -22,11 +29,16 @@ export function TodoForm({
   const [sum, setSum] = useState<TaskSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const members = useQuery<Member>(collection(db, "members"));
 
   const summarize = async (text: string) => {
     if (!text.trim()) return;
-    setBusy(true);
     setMsg("");
+    if (!USE_AI) {
+      setSum(localSummary(text, (members ?? []).map((m) => m.name), Date.now()));
+      return;
+    }
+    setBusy(true);
     try {
       const r = await api.summarizeTask({ text, kind });
       if (r.ok && r.summary) setSum(r.summary);
@@ -70,12 +82,12 @@ export function TodoForm({
         {!sum && (
           <>
             <button className="btn paste-btn" onClick={paste} disabled={busy}>
-              📋 LINEを貼り付けてまとめる
+              📋 LINEを貼り付ける
             </button>
             <textarea rows={4} value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="または、ここに手で書いてもOK（例：山田さんから冷蔵庫の取り置き、土曜まで）" />
             <div className="row gap center-y">
               <Character mood="guide" size={44} />
-              <span className="small muted">{busy ? "まとめています…" : "やること・相手・期限をまとめます"}</span>
+              <span className="small muted">{busy ? "まとめています…" : USE_AI ? "やること・相手・期限をまとめます" : "相手と期限は読み取れたら入ります"}</span>
             </div>
           </>
         )}
@@ -131,7 +143,7 @@ export function TodoForm({
             </button>
           ) : (
             <button className="btn primary grow" disabled={!raw.trim() || busy} onClick={() => summarize(raw)}>
-              {busy ? "まとめています…" : "まとめる"}
+              {busy ? "まとめています…" : "次へ"}
             </button>
           )}
         </div>
