@@ -24,9 +24,9 @@ jobs:
       - name: Show recent errors
         run: |
           gcloud logging read \
-            'resource.type="cloud_run_revision" AND severity>=WARNING AND timestamp>="'"$(date -u -d '-2 hours' +%Y-%m-%dT%H:%M:%SZ)"'"' \
+            'resource.type="cloud_run_revision" AND severity>=WARNING AND timestamp>="'"$(date -u -d '-4 hours' +%Y-%m-%dT%H:%M:%SZ)"'"' \
             --project "$PROJECT_ID" --limit 30 \
             --format='value(timestamp,resource.labels.service_name,severity,textPayload,jsonPayload.message)' \
             | cut -c1-400 | tee logs.txt
           # API から読めるように注釈としても出す（1ステップ10件まで）
-          head -10 logs.txt | while IFS= read -r l; do echo "::warning::${l//%/%25}"; done
+          grep -v 'not authorized' logs.txt | head -10 | while IFS= read -r l; do echo "::warning::${l//%/%25}"; done
