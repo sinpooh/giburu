@@ -7,8 +7,9 @@ import { Interval } from "./logic";
 export const SCOPES = ["openid", "email", "https://www.googleapis.com/auth/calendar.events"];
 
 export function oauthClient(): OAuth2Client {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  // 貼り付けたときに紛れ込んだ空白・改行は取り除く
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) throw new Error("GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET が設定されていません");
   return new OAuth2Client(clientId, clientSecret, `${appUrl()}/api/calendar/callback`);
 }
