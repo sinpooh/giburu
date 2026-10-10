@@ -10,12 +10,6 @@ function gcalUrl(start: string, end: string, details: string) {
   return `https://calendar.google.com/calendar/render?${q}`;
 }
 
-function icsUrl(start: string, end: string, details: string) {
-  const f = (s: string) => new Date(s).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//giburu//JA", "BEGIN:VEVENT", `UID:${f(start)}-giburu`, `DTSTAMP:${f(new Date().toISOString())}`, `DTSTART:${f(start)}`, `DTEND:${f(end)}`, "SUMMARY:青山さんと1to1", `DESCRIPTION:${details.replace(/\n/g, "\\n")}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
-  return `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
-}
-
 /** 相手用の候補選択ページ（ログイン不要） */
 export function Booking({ token }: { token: string }) {
   const [info, setInfo] = useState<BookingInfo | null>(null);
@@ -71,9 +65,6 @@ export function Booking({ token }: { token: string }) {
         <p className="muted">青山さんのカレンダーにも登録しました。当日よろしくお願いします！</p>
         <a className="btn primary wide" href={gcalUrl(c.start, c.end, details)} target="_blank" rel="noreferrer">
           Googleカレンダーに追加
-        </a>
-        <a className="btn ghost wide" href={icsUrl(c.start, c.end, details)} download="1to1.ics">
-          iPhoneのカレンダーに追加
         </a>
       </div>
     );
