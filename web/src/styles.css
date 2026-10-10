@@ -182,7 +182,8 @@ textarea {
 .empty .ch-wrap {
   display: block;
   width: fit-content;
-  margin: 0 auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 .ch-move {
   display: block;
@@ -272,6 +273,7 @@ textarea {
 }
 .bubble-row {
   margin-right: 30px;
+  padding-top: 18px; /* キャラが跳ねても上が切れないように */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -840,8 +842,8 @@ textarea {
   opacity: 0.4;
   text-decoration: line-through;
 }
-.ch-has-say {
-  margin-top: 56px;
+.ch-wrap.ch-has-say {
+  margin-top: 64px;
 }
 .ch-hop2 { animation: ch-hop2 2.2s cubic-bezier(.3,.7,.4,1) infinite; }
 .ch-twirl { animation: ch-twirl 3s cubic-bezier(.3,.7,.4,1) infinite; }
