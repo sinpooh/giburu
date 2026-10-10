@@ -17,6 +17,11 @@ export function startOfDay(t: number): number {
 export function endOfDay(t: number): number {
   return startOfDay(t) + DAY - 1;
 }
+/** 週のはじまり（月曜0時） */
+export function startOfWeek(t: number): number {
+  const p = jst(t);
+  return startOfDay(t) - ((p.wd + 6) % 7) * DAY;
+}
 export function startOfMonth(t: number): number {
   const p = jst(t);
   return jstDate(p.y, p.m, 1).getTime();

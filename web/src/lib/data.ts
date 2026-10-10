@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, query, serverTimestamp, Timestamp, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, limit, orderBy, query, serverTimestamp, Timestamp, updateDoc, where } from "firebase/firestore";
 import { call, db } from "../firebase";
 import { startOfMonth, startOfNextMonth } from "./time";
 import { lineUrlFor } from "./replies";
@@ -120,3 +120,26 @@ export const REASONS: Record<string, string> = {
   "no-slots": "2週間先まで空きが見つかりませんでした",
   "already-open": "もう候補が出ています",
 };
+
+/** リファーラル（チャプターのミッション：1週間に1件） */
+export interface Referral {
+  id: string;
+  to: string; // 紹介した相手（メンバー）
+  memo?: string;
+  createdAt?: Timestamp;
+  byName?: string;
+}
+export const WEEKLY_REFERRAL_GOAL = 1;
+export const referralsQuery = () => query(collection(db, "referrals"), orderBy("createdAt", "desc"), limit(60));
+export function addReferral(r: { to: string; memo: string; byName: string; byUid: string }) {
+  return addDoc(collection(db, "referrals"), { ...r, createdAt: serverTimestamp() });
+}
+export function deleteReferral(id: string) {
+  return deleteDoc(doc(db, "referrals", id));
+}
+/** 今週・今月の件数（まだ保存中で createdAt が無いものは今として数える） */
+export function referralStats(rows: Referral[] | null, now: number, weekStart: number, monthStart: number) {
+  const at = (r: Referral) => r.createdAt?.toMillis() ?? now;
+  const list = rows ?? [];
+  return { week: list.filter((r) => at(r) >= weekStart).length, month: list.filter((r) => at(r) >= monthStart).length };
+}

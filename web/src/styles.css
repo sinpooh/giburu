@@ -880,3 +880,33 @@ textarea {
   font-size: 0.75rem;
   vertical-align: middle;
 }
+
+/* 今週のリファーラル */
+.ref-meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: #fff;
+  border: 2px dashed #f3b04a;
+}
+.ref-meter.ref-done {
+  border-style: solid;
+  background: linear-gradient(90deg, #fff6df, #ffe9b8);
+}
+.ref-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.ref-big {
+  font-size: 1.3rem;
+}
+.ref-add {
+  flex: none;
+  background: linear-gradient(135deg, #ffb84d, #ff8a3d);
+  color: #fff;
+  font-weight: 800;
+}

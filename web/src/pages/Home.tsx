@@ -3,13 +3,14 @@ import { collection, doc, query, updateDoc, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { Me, isIOS, isStandalone, useDoc, useNow, useQuery, useSettings } from "../lib/hooks";
 import { CARD_META, Card, sortCards } from "../lib/cards";
-import { OneToOne, REASONS, activeOneToOnesQuery, addLineReply, api, finishCard, monthStats, openCardsQuery, snoozeCard } from "../lib/data";
-import { fmtCountdown, jst, nextSmokeTime } from "../lib/time";
+import { OneToOne, REASONS, Referral, WEEKLY_REFERRAL_GOAL, activeOneToOnesQuery, addLineReply, addReferral, api, finishCard, monthStats, openCardsQuery, referralStats, referralsQuery, snoozeCard } from "../lib/data";
+import { fmtCountdown, jst, nextSmokeTime, startOfMonth, startOfWeek } from "../lib/time";
 import { Bubble, Character, Mood } from "../components/Character";
 import { Meter } from "../components/Meter";
 import { SwipeCard } from "../components/SwipeCard";
 import { Confetti, usePraise } from "../components/Praise";
 import { LineReplyForm } from "../components/LineReplyForm";
+import { ReferralForm } from "../components/ReferralForm";
 import { lineUrlFor } from "../lib/replies";
 import { pushState } from "../lib/push";
 
@@ -32,6 +33,8 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
   const settings = useSettings();
   const cards = useQuery<Card>(openCardsQuery());
   const ones = useQuery<OneToOne>(activeOneToOnesQuery());
+  const refs = useQuery<Referral>(referralsQuery());
+  const [addingRef, setAddingRef] = useState(false);
   const calendar = useDoc<{ connected?: boolean }>(doc(db, "settings", "calendar"));
   const praises = useQuery<{ id: string; text: string; byName: string }>(readOnly ? null : query(collection(db, "praises"), where("seen", "==", false)));
   const { praise, celebrate } = usePraise();
@@ -155,6 +158,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
       )}
 
       <Meter count={stats.count} goal={settings.monthlyGoal} />
+      <RefMeter refs={refs} now={now} onAdd={isAoyama ? () => setAddingRef(true) : undefined} />
 
       {cards === null ? (
         <div className="card muted center">読み込み中…</div>
@@ -197,6 +201,18 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
           </span>
           <span className="line-add-plus">＋</span>
         </button>
+      )}
+      {addingRef && (
+        <ReferralForm
+          onCancel={() => setAddingRef(false)}
+          onSubmit={async (v) => {
+            const before = referralStats(refs, now, startOfWeek(now), startOfMonth(now)).week;
+            await addReferral({ ...v, byName: me.name, byUid: me.user.uid });
+            setAddingRef(false);
+            if (before + 1 === WEEKLY_REFERRAL_GOAL) celebrate({ title: "今週のミッション達成！", sub: `${v.to}さんへのリファーラル、ナイスギブ！` });
+            else praise(`${v.to}さんに紹介！ギブの達人！`);
+          }}
+        />
       )}
       {adding && (
         <LineReplyForm
@@ -261,6 +277,28 @@ function CardBody({ card, now, open, onToggle }: { card: Card; now: number; open
         </div>
       )}
       {(card.detail || card.lineText) && !open && <p className="muted small center">タップで中身を見る</p>}
+    </div>
+  );
+}
+
+/** 今週のリファーラル（チャプターのミッション：1週間に1件） */
+function RefMeter({ refs, now, onAdd }: { refs: Referral[] | null; now: number; onAdd?: () => void }) {
+  const { week, month } = referralStats(refs, now, startOfWeek(now), startOfMonth(now));
+  const done = week >= WEEKLY_REFERRAL_GOAL;
+  return (
+    <div className={`ref-meter ${done ? "ref-done" : ""}`}>
+      <div className="ref-left">
+        <span className="small">今週のリファーラル</span>
+        <b className="ref-big">
+          {week} / {WEEKLY_REFERRAL_GOAL}件 {done ? "達成！🎉" : ""}
+        </b>
+        <span className="small muted">今月 {month}件</span>
+      </div>
+      {onAdd && (
+        <button className="btn ref-add" onClick={onAdd}>
+          ＋ 記録
+        </button>
+      )}
     </div>
   );
 }

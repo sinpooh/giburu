@@ -1,12 +1,13 @@
 import { useQuery, useNow } from "../lib/hooks";
 import { useState } from "react";
-import { OneToOne, activeOneToOnesQuery, api } from "../lib/data";
+import { OneToOne, Referral, activeOneToOnesQuery, api, deleteReferral, referralsQuery } from "../lib/data";
 import { fmtDateTime, fmtRange } from "../lib/time";
 
 export function Schedule() {
   const now = useNow(60000);
   const rows = useQuery<OneToOne>(activeOneToOnesQuery());
   const [busy, setBusy] = useState<string | null>(null);
+  const refs = useQuery<Referral>(referralsQuery());
   const [msg, setMsg] = useState("");
   const cancel = async (o: OneToOne, what: string) => {
     const past = what === "記録";
@@ -72,6 +73,24 @@ export function Schedule() {
             {fmtDateTime(Date.parse(o.confirmedSlot!.start))} {o.memberName}さん
             <button className="link-btn small" disabled={busy === o.id} onClick={() => cancel(o, "記録")}>
               {busy === o.id ? "消しています…" : "テストだったので消す"}
+            </button>
+          </div>
+        ))}
+      </section>
+      <section>
+        <h3>最近のリファーラル</h3>
+        {(refs ?? []).length === 0 && <p className="muted">まだありません</p>}
+        {(refs ?? []).slice(0, 15).map((r) => (
+          <div key={r.id} className="list-item">
+            <div>
+              {r.createdAt ? fmtDateTime(r.createdAt.toMillis()) : ""} {r.to}さんに紹介
+            </div>
+            {r.memo && <div className="muted small">{r.memo}</div>}
+            <button
+              className="link-btn small"
+              onClick={() => window.confirm(`${r.to}さんへのリファーラルの記録を消します。よろしいですか？`) && deleteReferral(r.id)}
+            >
+              消す
             </button>
           </div>
         ))}
