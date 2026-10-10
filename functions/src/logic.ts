@@ -107,7 +107,7 @@ export function sortCards<T extends CardLike>(cards: T[], now: number): T[] {
   const rank = (c: T) => {
     if (c.dueAt && c.dueAt < endToday) return 0;
     if (WAITING_OTHERS.includes(c.type)) return 1;
-    if (c.type === "request" || c.type === "lineReply") return 2;
+    if (c.type === "request" || c.type === "lineReply" || c.type === "followUp" || c.type === "giveRemind") return 2;
     return 3;
   };
   return cards

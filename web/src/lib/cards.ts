@@ -1,7 +1,7 @@
 import { Timestamp } from "firebase/firestore";
 import { DAY, startOfDay } from "./time";
 
-export type CardType = "proposal" | "noReply" | "differentDay" | "confirmed" | "tomorrow" | "thanks" | "request" | "lineReply";
+export type CardType = "proposal" | "noReply" | "differentDay" | "confirmed" | "tomorrow" | "thanks" | "request" | "lineReply" | "followUp" | "giveRemind";
 
 export interface Card {
   id: string;
@@ -24,6 +24,8 @@ export interface Card {
   createdByName?: string;
   monthCount?: number;
   milestone?: boolean;
+  memberName?: string;
+  refMemo?: string;
 }
 
 const WAITING_OTHERS = ["differentDay", "thanks", "noReply", "confirmed", "tomorrow"];
@@ -36,7 +38,7 @@ export function sortCards(cards: Card[], now: number): Card[] {
     const due = ms(c.dueAt);
     if (due && due < endToday) return 0;
     if (WAITING_OTHERS.includes(c.type)) return 1;
-    if (c.type === "request" || c.type === "lineReply") return 2;
+    if (c.type === "request" || c.type === "lineReply" || c.type === "followUp" || c.type === "giveRemind") return 2;
     return 3;
   };
   return cards
@@ -54,4 +56,6 @@ export const CARD_META: Record<CardType, { label: string; right: string; left: s
   thanks: { label: "お礼", right: "LINEでお礼", left: "あとで" },
   request: { label: "シンプーさんからのお願い", right: "完了", left: "あとで" },
   lineReply: { label: "LINE返信", right: "LINEで返信", left: "あとで" },
+  followUp: { label: "その後どう？", right: "LINEで送る", left: "あとで" },
+  giveRemind: { label: "つなげました？", right: "紹介した！", left: "今回はなし" },
 };

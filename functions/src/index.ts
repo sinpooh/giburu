@@ -474,6 +474,18 @@ export const onPraiseCreated = onDocumentCreated("praises/{id}", async (ev) => {
 
 // ---------- 15分ごとの定期処理 ----------
 
+/** 1か月後の近況LINE。ひとことメモがあれば中身に合わせて一言そえる */
+function followText(name: string, memo?: DocumentData) {
+  const tags: string[] = memo?.tags ?? [];
+  const connect: string[] = memo?.connect ?? [];
+  const lines = [`${name}さん、こんにちは！青山です😊`, "1to1からもう1か月たちましたね。その後お変わりないですか？"];
+  if (connect.length) lines.push(`前にお話しした${connect.map((n) => `${n}さん`).join("・")}の件、よかったらおつなぎしますね！`);
+  else if (tags.includes("こちらから紹介できそう")) lines.push("何かお役に立てそうなことがあれば、いつでも声かけてください！");
+  if (tags.includes("また話したい")) lines.push("またゆっくりお話ししたいです！");
+  lines.push("お店にもぜひ遊びに来てください✨");
+  return lines.join("\n");
+}
+
 const OVERDUE_NOTIFY_TYPES = ["request", "lineReply", "thanks", "differentDay"];
 
 export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/Tokyo" }, async () => {
@@ -540,6 +552,63 @@ export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/T
         createdAt: FieldValue.serverTimestamp(),
       });
     }
+  }
+
+  // 2b) 1to1から1か月たったら「その後どうですか？」の近況LINE（30〜45日前の1to1だけ。そのあとまた会っていれば出さない）
+  const done = await db.collection("oneToOnes").where("status", "==", "done").get();
+  for (const o of done.docs) {
+    if (o.get("followCard")) continue;
+    const start = new Date((o.get("confirmedSlot") as Slot).start).getTime();
+    const age = now.getTime() - start;
+    if (age < 30 * DAY || age > 45 * DAY) continue;
+    await o.ref.update({ followCard: true });
+    const member = await db.doc(`members/${o.get("memberId")}`).get();
+    if (member.get("doNotInvite")) continue;
+    const last: string | undefined = member.get("lastOneToOne");
+    if (last && last > ymd(new Date(start))) continue;
+    const memo = await db.doc(`memos/${o.id}`).get();
+    const lineText = followText(o.get("memberName"), memo.exists ? memo.data() : undefined);
+    await db.collection("cards").add({
+      type: "followUp",
+      status: "open",
+      title: `${o.get("memberName")}さんに近況LINEしませんか？`,
+      sub: "1to1から1か月。ひとことで関係が続きます",
+      oneToOneId: o.id,
+      memberId: o.get("memberId"),
+      lineText,
+      lineUrl: lineShareUrl(lineText),
+      dueAt: null,
+      createdBy: "system",
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  // 2c) メモで「紹介できそう」「つなげたい人」があるのに、2週間たってもその人へのリファーラル記録がない → 思い出し
+  const memos = await db.collection("memos").where("createdAt", "<=", Timestamp.fromMillis(now.getTime() - 14 * DAY)).where("createdAt", ">=", Timestamp.fromMillis(now.getTime() - 30 * DAY)).get();
+  for (const m of memos.docs) {
+    if (m.get("remindCard")) continue;
+    const connect: string[] = m.get("connect") ?? [];
+    const tags: string[] = m.get("tags") ?? [];
+    if (connect.length === 0 && !tags.includes("こちらから紹介できそう")) continue;
+    await m.ref.update({ remindCard: true });
+    const name: string = m.get("memberName");
+    const since = (m.get("createdAt") as Timestamp).toMillis();
+    const refs = await db.collection("referrals").where("to", "==", name).get();
+    if (refs.docs.some((r) => ((r.get("createdAt") as Timestamp | null)?.toMillis() ?? 0) >= since)) continue;
+    const what = connect.length ? `${connect.map((n) => `${n}さん`).join("・")}とつなぐ` : (m.get("text") as string) || "紹介できそう";
+    await db.collection("cards").add({
+      type: "giveRemind",
+      status: "open",
+      title: `${name}さん、つなげました？`,
+      sub: `1to1のメモ：${what}`,
+      hint: "紹介できたら「紹介した！」でリファーラルに記録されます",
+      memberId: m.get("memberId"),
+      memberName: name,
+      refMemo: connect.length ? what : (m.get("text") as string) || "",
+      dueAt: null,
+      createdBy: "system",
+      createdAt: FieldValue.serverTimestamp(),
+    });
   }
 
   // 3) 一服タイム：その時いちばん上のカードを1枚だけ通知（期限が近いものは1回だけやさしく催促）

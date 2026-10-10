@@ -6,10 +6,10 @@ import { Member, Memo } from "../lib/data";
 import { Character } from "./Character";
 
 /** 「リファーラルを記録」：だれに紹介したか（と、ひとことメモ）だけ */
-export function ReferralForm({ memos = [], onSubmit, onCancel }: { memos?: Memo[]; onSubmit: (v: { to: string; memo: string }) => Promise<void>; onCancel: () => void }) {
+export function ReferralForm({ memos = [], initial, onSubmit, onCancel }: { memos?: Memo[]; initial?: { to: string; memo: string }; onSubmit: (v: { to: string; memo: string }) => Promise<void>; onCancel: () => void }) {
   const members = useQuery<Member>(collection(db, "members"));
-  const [to, setTo] = useState("");
-  const [memo, setMemo] = useState("");
+  const [to, setTo] = useState(initial?.to ?? "");
+  const [memo, setMemo] = useState(initial?.memo ?? "");
   const [saving, setSaving] = useState(false);
   // 「つなげたい人」「こちらから紹介できそう」のメモを紹介のヒントに出す（新しい順に最大4つ）
   const ideas = memos

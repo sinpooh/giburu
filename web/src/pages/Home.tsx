@@ -37,6 +37,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
   const ones = useQuery<OneToOne>(activeOneToOnesQuery());
   const refs = useQuery<Referral>(referralsQuery());
   const [addingRef, setAddingRef] = useState(false);
+  const [refFor, setRefFor] = useState<Card | null>(null);
   const memos = useQuery<Memo>(memosQuery());
   const [memoFor, setMemoFor] = useState<{ oneToOneId: string; memberId: string; memberName: string } | null>(null);
   const calendar = useDoc<{ connected?: boolean }>(doc(db, "settings", "calendar"));
@@ -85,6 +86,14 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
         // LINEから戻ってきたら「ひとことメモ」
         if (c.oneToOneId && c.memberId) setMemoFor({ oneToOneId: c.oneToOneId, memberId: c.memberId, memberName: c.title.replace(/さんにお礼送る？$/, "") });
         break;
+      case "followUp":
+        openLine(c.lineUrl);
+        finishCard(c.id);
+        praise("ひとことで関係が続く！さすがです");
+        break;
+      case "giveRemind":
+        setRefFor(c);
+        break;
       case "lineReply":
         openLine(c.lineUrl ?? lineUrlFor(c.lineText ?? ""));
         finishCard(c.id);
@@ -113,6 +122,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
         }
         break;
       case "confirmed":
+      case "giveRemind":
         finishCard(c.id);
         break;
       case "tomorrow":
@@ -219,14 +229,17 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
           }}
         />
       )}
-      {addingRef && (
+      {(addingRef || refFor) && (
         <ReferralForm
           memos={memos ?? []}
-          onCancel={() => setAddingRef(false)}
+          initial={refFor ? { to: refFor.memberName ?? "", memo: refFor.refMemo ?? "" } : undefined}
+          onCancel={() => (setAddingRef(false), setRefFor(null))}
           onSubmit={async (v) => {
             const before = referralStats(refs, now, startOfRefWeek(now), startOfMonth(now)).week;
             await addReferral({ ...v, byName: me.name, byUid: me.user.uid });
+            if (refFor) await finishCard(refFor.id);
             setAddingRef(false);
+            setRefFor(null);
             if (before + 1 === WEEKLY_REFERRAL_GOAL) celebrate({ title: "今週のミッション達成！", sub: `${v.to}さんへのリファーラル、ナイスギブ！` });
             else praise(`${v.to}さんに紹介！ギブの達人！`);
           }}
