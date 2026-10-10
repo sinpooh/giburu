@@ -20,6 +20,7 @@ export interface AppSettings {
   closedDays: number[];
   format: "online" | "inperson";
   shopAddress: string;
+  bniUrl?: string; // リファーラルを記録したあとに開くBNIアプリ／サイト
   holdMin: number;
   visitTravelMin: number;
   meetingUrl: string;

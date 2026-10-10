@@ -150,6 +150,12 @@ export function Settings({ me, calendarResult }: { me: Me; calendarResult?: stri
         </div>
       </section>
 
+      <section className="box">
+        <h3>BNIアプリ</h3>
+        <p className="small muted">リファーラルを記録したあとの「BNIアプリで入力する」ボタンで開くページです。空欄ならBNI Connectのサイトを開きます。</p>
+        <Field label="開くURL" type="url" value={s.bniUrl ?? ""} onSave={(v) => save({ bniUrl: v.trim() })} />
+      </section>
+
       {me.role === "manager" && <Templates s={s} save={save} />}
 
       <section className="box center">

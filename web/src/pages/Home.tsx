@@ -16,6 +16,8 @@ import { MemoForm } from "../components/MemoForm";
 import { memoSummary, memosQuery, saveMemo } from "../lib/data";
 import { pushState } from "../lib/push";
 
+const BNI_URL = "https://www.bniconnectglobal.com/";
+
 function greeting(now: number, smokeTimes: string[]): string {
   const p = jst(now);
   const cur = p.hh * 60 + p.mm;
@@ -38,6 +40,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
   const refs = useQuery<Referral>(referralsQuery());
   const [addingRef, setAddingRef] = useState(false);
   const [refFor, setRefFor] = useState<Card | null>(null);
+  const [bniTodo, setBniTodo] = useState<string | null>(null); // 記録したリファーラルの相手。BNIアプリにも入力してもらう
   const memos = useQuery<Memo>(memosQuery());
   const [memoFor, setMemoFor] = useState<{ oneToOneId: string; memberId: string; memberName: string } | null>(null);
   const calendar = useDoc<{ connected?: boolean }>(doc(db, "settings", "calendar"));
@@ -175,6 +178,27 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
 
       <Meter count={stats.count} goal={settings.monthlyGoal} />
       <RefMeter refs={refs} now={now} onAdd={isAoyama ? () => setAddingRef(true) : undefined} />
+      {bniTodo && (
+        <div className="bni-todo">
+          <span className="small">
+            <b>{bniTodo}さんへの紹介</b>、BNIアプリにも入力しておこう（締め切りは水曜）
+          </span>
+          <div className="row gap">
+            <button
+              className="btn primary small"
+              onClick={() => {
+                window.open(settings.bniUrl || BNI_URL, "_blank");
+                setBniTodo(null);
+              }}
+            >
+              BNIアプリで入力する
+            </button>
+            <button className="btn ghost small" onClick={() => setBniTodo(null)}>
+              もう入れた
+            </button>
+          </div>
+        </div>
+      )}
 
       {cards === null ? (
         <div className="card muted center">読み込み中…</div>
@@ -240,6 +264,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
             if (refFor) await finishCard(refFor.id);
             setAddingRef(false);
             setRefFor(null);
+            setBniTodo(v.to);
             if (before + 1 === WEEKLY_REFERRAL_GOAL) celebrate({ title: "今週のミッション達成！", sub: `${v.to}さんへのリファーラル、ナイスギブ！` });
             else praise(`${v.to}さんに紹介！ギブの達人！`);
           }}
