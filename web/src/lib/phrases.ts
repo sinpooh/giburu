@@ -45,3 +45,19 @@ export const PRAISES = [
 export function randomPraise(): string {
   return PRAISES[Math.floor(Math.random() * PRAISES.length)];
 }
+
+// キャラをタップしたときのひとこと
+export const TAP_LINES = [
+  "えへへ、呼んだ？",
+  "今日もいい日になるよ〜♪",
+  "ぴょーん！",
+  "一服ついでに1件だけ、いこっ！",
+  "がんばりすぎないでね☕",
+  "ギブの輪、広げよ〜！",
+  "スワイプ1回で終わるよ！",
+  "にこにこ〜😊",
+  "わーい！",
+  "いつも見てるよ〜！",
+  "ご縁っていいよね〜",
+  "今日のわたし、調子いい！",
+];

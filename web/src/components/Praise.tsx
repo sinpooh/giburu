@@ -57,7 +57,7 @@ export function PraiseProvider({ children }: { children: React.ReactNode }) {
             transition={{ type: "spring", stiffness: 380, damping: 22 }}
           >
             <div className="bubble praise-bubble">{toast.text}</div>
-            <Character mood="praise" size={150} />
+            <Character mood="praise" size={150} talk={false} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -65,7 +65,7 @@ export function PraiseProvider({ children }: { children: React.ReactNode }) {
         <div className="celebrate" onClick={() => setBig(null)}>
           <Confetti count={90} />
           <motion.div initial={{ scale: 0.4, rotate: -8 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 260, damping: 12 }}>
-            <Character mood="praise" size={260} />
+            <Character mood="praise" size={260} say="やったー！！" />
           </motion.div>
           <h1 className="celebrate-title">{big.title}</h1>
           {big.sub && <p className="celebrate-sub">{big.sub}</p>}

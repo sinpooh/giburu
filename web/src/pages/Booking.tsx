@@ -150,7 +150,7 @@ const confirm_ = (m: string) => window.confirm(m);
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="booking center">
-      <Character mood="guide" size={160} />
+      <Character mood="praise" size={160} say="ありがとうございます！" />
       <p>{children}</p>
     </div>
   );

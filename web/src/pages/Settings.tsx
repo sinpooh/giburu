@@ -140,7 +140,7 @@ export function Settings({ me, calendarResult }: { me: Me; calendarResult?: stri
       {me.role === "manager" && <Templates s={s} save={save} />}
 
       <section className="box center">
-        <Character mood="guide" size={70} />
+        <Character mood="guide" size={70} say="設定はいつでも変えられるよ！" />
         <p className="muted small">{me.user.email} でログイン中</p>
         <button className="btn ghost" onClick={() => signOut(auth)}>
           ログアウト

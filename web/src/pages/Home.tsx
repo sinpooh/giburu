@@ -173,7 +173,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
         </SwipeCard>
       ) : (
         <div className="card center empty">
-          <Character mood="praise" size={130} />
+          <Character mood="praise" size={130} say="ぜんぶ終わり！えらすぎ〜！" />
           <p>
             <b>今日はもう全部終わり！</b>
           </p>

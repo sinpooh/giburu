@@ -27,7 +27,7 @@ export function Login({ error }: { error: string }) {
   if (needInstall) {
     return (
       <div className="page center login">
-        <Character mood="guide" size={180} />
+        <Character mood="guide" size={180} say="ホーム画面に追加してね！" />
         <h1>ようこそ、ギブるへ！</h1>
         <p>まずはホーム画面に追加してね（通知を受け取るのに必要です）</p>
         <ol className="steps">
@@ -51,7 +51,7 @@ export function Login({ error }: { error: string }) {
 
   return (
     <div className="page center login">
-      <Character mood="guide" size={180} />
+      <Character mood="praise" size={180} say="一緒にがんばろ〜♪" />
       <h1>ギブる</h1>
       <p>1to1も段取りも、スワイプ1回で。</p>
       {(error || err) && <p className="notice">{error || err}</p>}

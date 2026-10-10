@@ -42,7 +42,7 @@ function Authed() {
   if (loading)
     return (
       <div className="page center">
-        <Character mood="normal" size={120} />
+        <Character mood="normal" size={120} say="よみこみ中…ちょっと待ってね" />
       </div>
     );
   if (!me) return <Login error={error || redirectErr} />;
