@@ -520,7 +520,7 @@ export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/T
       const dueSoon = top.dueAt && top.dueAt - now.getTime() < 24 * HOUR && top.dueAt > now.getTime();
       if (dueSoon && !top.nudged && OVERDUE_NOTIFY_TYPES.includes(top.type)) {
         await top.ref.update({ nudged: true });
-        await push("aoyama", "店長シンプー", `「${top.title}」今日までだよ〜。スワイプ1回で終わるよ`, `/?card=${top.id}`);
+        await push("aoyama", "ギブる", `「${top.title}」今日までだよ〜。スワイプ1回で終わるよ`, `/?card=${top.id}`);
       } else {
         const lines = cards.filter((c) => c.type === "lineReply" && c.id !== top.id && (!c.snoozedUntil || c.snoozedUntil <= now.getTime())).length;
         const extra = lines ? `／LINE返信もあと${lines}件` : "";

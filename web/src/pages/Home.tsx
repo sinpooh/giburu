@@ -83,7 +83,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
         break;
       case "confirmed":
         finishCard(c.id);
-        if (c.milestone) celebrate({ title: `今月${settings.monthlyGoal}件達成！！`, sub: "青山さん、最高すぎる！店長も鼻が高いっす！" });
+        if (c.milestone) celebrate({ title: `今月${settings.monthlyGoal}件達成！！`, sub: "青山さん、最高すぎる！みんなも鼻が高いっす！" });
         else praise("1to1、決まりましたね！さすが！");
         break;
       default:
@@ -193,7 +193,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
           <span className="line-add-icon">LINE</span>
           <span className="line-add-text">
             <b>LINE返信あとで</b>
-            <small>文面は店長が用意します</small>
+            <small>文面はギブるが用意します</small>
           </span>
           <span className="line-add-plus">＋</span>
         </button>
