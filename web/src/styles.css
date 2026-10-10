@@ -843,3 +843,28 @@ textarea {
 .ch-has-say {
   margin-top: 56px;
 }
+.ch-hop2 { animation: ch-hop2 2.2s cubic-bezier(.3,.7,.4,1) infinite; }
+.ch-twirl { animation: ch-twirl 3s cubic-bezier(.3,.7,.4,1) infinite; }
+.ch-skip { animation: ch-skip 2.8s ease-in-out infinite; }
+.ch-small.ch-twirl, .ch-small.ch-hop2, .ch-small.ch-skip { animation-name: ch-bob; }
+@keyframes ch-hop2 {
+  0%, 50%, 100% { transform: translateY(0) scale(1, 1); }
+  8% { transform: translateY(0) scale(1.06, .93); }
+  20% { transform: translateY(-12%) scale(.97, 1.04); }
+  30% { transform: translateY(0) scale(1.05, .95); }
+  38% { transform: translateY(-7%) scale(.98, 1.02); }
+  46% { transform: translateY(0) scale(1.03, .97); }
+}
+@keyframes ch-twirl {
+  0%, 60%, 100% { transform: translateY(0) rotate(0) scale(1, 1); }
+  8% { transform: translateY(0) scale(1.08, .9); }
+  28% { transform: translateY(-20%) rotate(180deg) scale(1); }
+  48% { transform: translateY(0) rotate(360deg) scale(1.06, .94); }
+  56% { transform: translateY(0) rotate(360deg) scale(1); }
+}
+@keyframes ch-skip {
+  0%, 100% { transform: translateX(0) translateY(0) rotate(0); }
+  25% { transform: translateX(-6%) translateY(-8%) rotate(-6deg); }
+  50% { transform: translateX(0) translateY(0) rotate(0); }
+  75% { transform: translateX(6%) translateY(-8%) rotate(6deg); }
+}
