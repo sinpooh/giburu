@@ -10,7 +10,7 @@ import { randomBytes } from "node:crypto";
 import { ALLOWED, AppSettings, DEFAULT_SETTINGS, FORMAT_LABEL, MEET_FORMATS, MeetFormat, REGION, appUrl } from "./config";
 import { DAY, HOUR, MIN, endOfJstDay, fmtRange, fmtSlot, isWeekend, jstParts, startOfJstDay, startOfJstMonth, startOfNextJstMonth, ymd } from "./time";
 import { Interval, Slot, currentSmokeKey, fillTemplate, pickSlots, rankMembers, slotsText, sortCards, periodLabel } from "./logic";
-import { SCOPES, busyIntervals, createEvent, isConnected, oauthClient } from "./calendar";
+import { SCOPES, busyIntervals, createEvent, deleteEvent, isConnected, oauthClient } from "./calendar";
 import { push, pushUid } from "./push";
 
 initializeApp();
@@ -371,6 +371,7 @@ export const confirmBooking = onCall(async (req) => {
     .filter(Boolean)
     .join("\n");
   let eventId: string | null = null;
+  const extraEventIds: string[] = [];
   const iso = (ms: number) => new Date(ms).toISOString();
   const name = `${o.get("memberName")}さん`;
   try {
@@ -385,16 +386,17 @@ export const confirmBooking = onCall(async (req) => {
     });
     // ここから下は青山さんのカレンダーだけ（話が伸びたとき用の予備・訪問の移動）
     const holdEnd = start + Math.max(s.durationMin, s.holdMin) * MIN;
+    const keep = (id: string | null) => id && extraEventIds.push(id);
     if (holdEnd > Date.parse(slot.end))
-      await createEvent({ summary: `（予備）${name}との1to1が伸びたとき用`, description: "ギブるで確保", location: "", start: slot.end, end: iso(holdEnd) });
+      keep(await createEvent({ summary: `（予備）${name}との1to1が伸びたとき用`, description: "ギブるで確保", location: "", start: slot.end, end: iso(holdEnd) }));
     if (visit && s.visitTravelMin > 0) {
-      await createEvent({ summary: `移動（${name}の訪問へ）`, description: address, location: address, start: iso(start - s.visitTravelMin * MIN), end: slot.start });
-      await createEvent({ summary: `移動（${name}の訪問から）`, description: "", location: "", start: iso(holdEnd), end: iso(holdEnd + s.visitTravelMin * MIN) });
+      keep(await createEvent({ summary: `移動（${name}の訪問へ）`, description: address, location: address, start: iso(start - s.visitTravelMin * MIN), end: slot.start }));
+      keep(await createEvent({ summary: `移動（${name}の訪問から）`, description: "", location: "", start: iso(holdEnd), end: iso(holdEnd + s.visitTravelMin * MIN) }));
     }
   } catch (e) {
     logger.error("createEvent failed", e);
   }
-  await o.ref.update({ eventId });
+  await o.ref.update({ eventId, extraEventIds });
   await closeCardsFor(o.id);
 
   const now = new Date();
@@ -419,6 +421,29 @@ export const confirmBooking = onCall(async (req) => {
   await push("managerNotify", "1to1が決まりました", `青山さん × ${o.get("memberName")}さん ${when}【${FORMAT_LABEL[format]}】（今月 ${count}/${goal}件）`, "/");
   if (milestone) await push("managers", "今月の1to1目標達成！🎉", `青山さんが今月${goal}件を達成しました。褒めてあげてください！`, "/");
   return { ok: true, start: slot.start, end: slot.end, format, place: visit ? address : s.shopAddress, meetingUrl: format === "online" ? s.meetingUrl : "" };
+});
+
+/** 予定画面から「これからの1to1」「返事待ち」を取り消す。カレンダーの予定も消し、相手のリンクは使えなくなる */
+export const cancelOneToOne = onCall(async (req) => {
+  requireAllowed(req);
+  const ref = db.doc(`oneToOnes/${String(req.data?.id ?? "")}`);
+  const o = await ref.get();
+  if (!o.exists) throw new HttpsError("not-found", "見つかりません");
+  if (!["proposed", "waiting", "confirmed"].includes(o.get("status"))) return { ok: true };
+  await ref.update({ status: "cancelled", cancelledAt: FieldValue.serverTimestamp() });
+  const ids: string[] = [o.get("eventId"), ...(o.get("extraEventIds") ?? [])].filter(Boolean);
+  let calendarOk = true;
+  for (const id of ids) {
+    try {
+      await deleteEvent(id);
+    } catch (e) {
+      calendarOk = false;
+      logger.error("deleteEvent failed", e);
+    }
+  }
+  const cards = await db.collection("cards").where("oneToOneId", "==", o.id).where("status", "==", "open").get();
+  for (const c of cards.docs) await c.ref.update({ status: "done", doneAt: FieldValue.serverTimestamp() });
+  return { ok: true, calendarOk };
 });
 
 /** 「どれも合わない」 */

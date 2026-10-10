@@ -1,10 +1,26 @@
 import { useQuery, useNow } from "../lib/hooks";
-import { OneToOne, activeOneToOnesQuery } from "../lib/data";
+import { useState } from "react";
+import { OneToOne, activeOneToOnesQuery, api } from "../lib/data";
 import { fmtDateTime, fmtRange } from "../lib/time";
 
 export function Schedule() {
   const now = useNow(60000);
   const rows = useQuery<OneToOne>(activeOneToOnesQuery());
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
+  const cancel = async (o: OneToOne, what: string) => {
+    if (!window.confirm(`${o.memberName}さんの${what}を取り消します。${o.status === "confirmed" ? "カレンダーの予定も消えます。" : "送ったリンクも使えなくなります。"}よろしいですか？\n（相手への連絡は、必要ならLINEでお願いします）`)) return;
+    setBusy(o.id);
+    setMsg("");
+    try {
+      const r = await api.cancelOneToOne({ id: o.id });
+      setMsg(r.calendarOk === false ? "取り消しました。カレンダーの予定は消せなかったので、手で消してください" : "取り消しました");
+    } catch (e) {
+      setMsg(`取り消せませんでした：${String((e as Error).message ?? e)}`);
+    } finally {
+      setBusy(null);
+    }
+  };
   if (!rows) return <div className="page muted center">読み込み中…</div>;
   const iso = new Date(now).toISOString();
   const upcoming = rows.filter((o) => o.status === "confirmed" && o.confirmedSlot && o.confirmedSlot.end >= iso).sort((a, b) => a.confirmedSlot!.start.localeCompare(b.confirmedSlot!.start));
@@ -17,6 +33,7 @@ export function Schedule() {
   return (
     <div className="page">
       <h1>予定</h1>
+      {msg && <p className="notice">{msg}</p>}
       <section>
         <h3>これからの1to1</h3>
         {upcoming.length === 0 && <p className="muted">まだありません</p>}
@@ -26,6 +43,9 @@ export function Schedule() {
             <div>
               {o.memberName}さん{o.company ? `（${o.company}）` : ""}
             </div>
+            <button className="link-btn small" disabled={busy === o.id} onClick={() => cancel(o, "1to1")}>
+              {busy === o.id ? "取り消し中…" : "この1to1を取り消す"}
+            </button>
           </div>
         ))}
       </section>
@@ -36,6 +56,9 @@ export function Schedule() {
           <div key={o.id} className="list-item">
             <div>{o.memberName}さん</div>
             <div className="muted small">{o.expiresAt ? `リンクの期限 ${fmtDateTime(o.expiresAt.toMillis())}` : ""}</div>
+            <button className="link-btn small" disabled={busy === o.id} onClick={() => cancel(o, "お誘い")}>
+              {busy === o.id ? "取り消し中…" : "このお誘いを取り消す"}
+            </button>
           </div>
         ))}
       </section>

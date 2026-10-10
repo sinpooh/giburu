@@ -58,6 +58,7 @@ export const api = {
   getBooking: call<{ token: string }, BookingInfo>("getBooking"),
   confirmBooking: call<{ token: string; index: number; format: MeetFormat; address?: string }, { ok: boolean; reason?: string; start?: string; end?: string; meetingUrl?: string; format?: MeetFormat; place?: string }>("confirmBooking"),
   declineBooking: call<{ token: string }, { ok: boolean }>("declineBooking"),
+  cancelOneToOne: call<{ id: string }, { ok: boolean; calendarOk?: boolean }>("cancelOneToOne"),
 };
 
 /** 1to1のやり方。来店がいちばんのおすすめ */

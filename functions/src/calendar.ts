@@ -105,3 +105,15 @@ export async function createEvent(ev: {
   const data = await call<{ id: string }>(c, `${BASE}/events${q}`, { method: "POST", body });
   return data.id;
 }
+
+/** 予定を消す（招待した相手にも取り消しが届く） */
+export async function deleteEvent(id: string): Promise<void> {
+  const c = await authedClient();
+  if (!c) return;
+  try {
+    await c.request({ url: `${BASE}/events/${encodeURIComponent(id)}?sendUpdates=all`, method: "DELETE" });
+  } catch (e: unknown) {
+    const code = (e as { response?: { status?: number } })?.response?.status;
+    if (code !== 404 && code !== 410) throw e; // もう消えているならOK
+  }
+}

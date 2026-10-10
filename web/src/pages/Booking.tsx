@@ -6,7 +6,7 @@ import { fmtDateTime, fmtRange } from "../lib/time";
 
 function gcalUrl(start: string, end: string, details: string, location = "") {
   const f = (s: string) => new Date(s).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const q = new URLSearchParams({ action: "TEMPLATE", text: "青山さんと1to1", dates: `${f(start)}/${f(end)}`, details, location });
+  const q = new URLSearchParams({ action: "TEMPLATE", text: "1to1 青山さん（リサイクルショップ）", dates: `${f(start)}/${f(end)}`, details, location });
   return `https://calendar.google.com/calendar/render?${q}`;
 }
 
@@ -34,6 +34,7 @@ export function Booking({ token }: { token: string }) {
   if (info.status === "notfound" || info.status === "error" || info.status === "skipped")
     return <Shell>このリンクは見つかりませんでした。お手数ですが青山さんに直接ご連絡ください。</Shell>;
   if (info.status === "expired") return <Shell>このリンクの期限が切れました。青山さんから改めてご連絡します🙏</Shell>;
+  if (info.status === "cancelled") return <Shell>こちらの1to1のお誘いは取り消しになりました。青山さんから改めてご連絡します🙏</Shell>;
   if (info.status === "declined") return <Shell>ご連絡ありがとうございます！青山さんから別の候補が届きます。</Shell>;
 
   const header = (
