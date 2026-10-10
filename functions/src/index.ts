@@ -423,13 +423,14 @@ export const confirmBooking = onCall(async (req) => {
   return { ok: true, start: slot.start, end: slot.end, format, place: visit ? address : s.shopAddress, meetingUrl: format === "online" ? s.meetingUrl : "" };
 });
 
-/** 予定画面から「これからの1to1」「返事待ち」を取り消す。カレンダーの予定も消し、相手のリンクは使えなくなる */
+/** 予定画面から「これからの1to1」「返事待ち」「最近やった1to1（テスト分）」を取り消す。カレンダーの予定も消し、相手のリンクは使えなくなる */
 export const cancelOneToOne = onCall(async (req) => {
   requireAllowed(req);
   const ref = db.doc(`oneToOnes/${String(req.data?.id ?? "")}`);
   const o = await ref.get();
   if (!o.exists) throw new HttpsError("not-found", "見つかりません");
-  if (!["proposed", "waiting", "confirmed"].includes(o.get("status"))) return { ok: true };
+  // done はテストで入れた1to1を今月の件数から外すため
+  if (!["proposed", "waiting", "confirmed", "done"].includes(o.get("status"))) return { ok: true };
   await ref.update({ status: "cancelled", cancelledAt: FieldValue.serverTimestamp() });
   const ids: string[] = [o.get("eventId"), ...(o.get("extraEventIds") ?? [])].filter(Boolean);
   let calendarOk = true;

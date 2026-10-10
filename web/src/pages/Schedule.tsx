@@ -9,12 +9,14 @@ export function Schedule() {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
   const cancel = async (o: OneToOne, what: string) => {
-    if (!window.confirm(`${o.memberName}さんの${what}を取り消します。${o.status === "confirmed" ? "カレンダーの予定も消えます。" : "送ったリンクも使えなくなります。"}よろしいですか？\n（相手への連絡は、必要ならLINEでお願いします）`)) return;
+    const past = what === "記録";
+    const note = past ? "今月の件数からも外れます。" : o.status === "confirmed" ? "カレンダーの予定も消えます。" : "送ったリンクも使えなくなります。";
+    if (!window.confirm(`${o.memberName}さんの${what}を${past ? "消し" : "取り消し"}ます。${note}よろしいですか？${past ? "" : "\n（相手への連絡は、必要ならLINEでお願いします）"}`)) return;
     setBusy(o.id);
     setMsg("");
     try {
       const r = await api.cancelOneToOne({ id: o.id });
-      setMsg(r.calendarOk === false ? "取り消しました。カレンダーの予定は消せなかったので、手で消してください" : "取り消しました");
+      setMsg(r.calendarOk === false ? "消しました。カレンダーの予定は消せなかったので、手で消してください" : what === "記録" ? "消しました。今月の件数からも外れました" : "取り消しました");
     } catch (e) {
       setMsg(`取り消せませんでした：${String((e as Error).message ?? e)}`);
     } finally {
@@ -68,6 +70,9 @@ export function Schedule() {
         {past.map((o) => (
           <div key={o.id} className="list-item muted">
             {fmtDateTime(Date.parse(o.confirmedSlot!.start))} {o.memberName}さん
+            <button className="link-btn small" disabled={busy === o.id} onClick={() => cancel(o, "記録")}>
+              {busy === o.id ? "消しています…" : "テストだったので消す"}
+            </button>
           </div>
         ))}
       </section>
