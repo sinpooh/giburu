@@ -13,9 +13,7 @@ import { LineReplyForm } from "../components/LineReplyForm";
 import { ReferralForm } from "../components/ReferralForm";
 import { lineUrlFor } from "../lib/replies";
 import { MemoForm } from "../components/MemoForm";
-import { TodoForm } from "../components/TodoForm";
-import { TodoLists } from "../components/TodoLists";
-import { Task, TaskKind, addTodo, openTasksQuery } from "../lib/data";
+import { Task, openTasksQuery } from "../lib/data";
 import { ymd } from "../lib/time";
 import { memoSummary, memosQuery, saveMemo } from "../lib/data";
 import { pushState } from "../lib/push";
@@ -36,7 +34,7 @@ function greeting(now: number, smokeTimes: string[]): string {
   return "今日もお疲れさまでした！あと1枚だけ見てって〜";
 }
 
-export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me; readOnly?: boolean; goSchedule?: () => void; goSettings?: () => void }) {
+export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { me: Me; readOnly?: boolean; goSchedule?: () => void; goSettings?: () => void; goTab?: (t: "mission" | "order") => void }) {
   const now = useNow(30000);
   const settings = useSettings();
   const cards = useQuery<Card>(openCardsQuery());
@@ -47,7 +45,6 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
   const [bniTodo, setBniTodo] = useState<string | null>(null); // 記録したリファーラルの相手。BNIアプリにも入力してもらう
   const memos = useQuery<Memo>(memosQuery());
   const tasks = useQuery<Task>(openTasksQuery());
-  const [addingTask, setAddingTask] = useState<TaskKind | null>(null);
   const [memoFor, setMemoFor] = useState<{ oneToOneId: string; memberId: string; memberName: string } | null>(null);
   const calendar = useDoc<{ connected?: boolean }>(doc(db, "settings", "calendar"));
   const praises = useQuery<{ id: string; text: string; byName: string }>(readOnly ? null : query(collection(db, "praises"), where("seen", "==", false)));
@@ -248,23 +245,20 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
           <span className="line-add-plus">＋</span>
         </button>
       )}
-      <TodoLists
-        tasks={tasks}
-        today={ymd(now)}
-        tomorrow={ymd(now + DAY)}
-        onAdd={isAoyama ? setAddingTask : undefined}
-        onDone={(t) => praise(t.kind === "order" ? `「${t.title}」完了！お客さんも喜びます` : `ミッション「${t.title}」クリア！`)}
-      />
-      {addingTask && (
-        <TodoForm
-          kind={addingTask}
-          onCancel={() => setAddingTask(null)}
-          onSubmit={async (v) => {
-            await addTodo({ ...v, byName: me.name });
-            setAddingTask(null);
-            praise("覚えときます！あとは上から片づけるだけ");
-          }}
-        />
+      {tasks && tasks.length > 0 && (
+        <div className="todo-summary">
+          {(["mission", "order"] as const).map((k) => {
+            const list = tasks.filter((t) => t.kind === k);
+            const due = list.filter((t) => t.due && t.due <= ymd(now)).length;
+            return (
+              <button key={k} className={`todo-sum todo-${k}`} onClick={() => goTab?.(k)}>
+                <span>{k === "mission" ? "🎯 ミッション" : "📦 依頼"}</span>
+                <b>{list.length}件</b>
+                {due > 0 && <span className="todo-due hot">今日まで{due}件</span>}
+              </button>
+            );
+          })}
+        </div>
       )}
       {memoFor && (
         <MemoForm

@@ -98,7 +98,8 @@ textarea {
   background: none;
   padding: 14px 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 .tabbar button.on {
   color: var(--pink);
@@ -1010,4 +1011,49 @@ textarea {
 .todo-detail ul {
   margin: 6px 0;
   padding-left: 1.2em;
+}
+.todo-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 10px 0;
+}
+.todo-sum {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+}
+.todo-add-big {
+  width: 100%;
+  margin: 10px 0;
+}
+.seg-head {
+  padding-bottom: 0;
+}
+.seg {
+  display: flex;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 3px;
+  margin-top: 10px;
+}
+.seg button {
+  flex: 1;
+  border: none;
+  background: none;
+  border-radius: 99px;
+  padding: 8px;
+  color: var(--muted);
+}
+.seg button.on {
+  background: var(--pink);
+  color: #fff;
+  font-weight: 700;
 }

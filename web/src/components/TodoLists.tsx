@@ -12,7 +12,9 @@ export function TodoLists({
   tomorrow,
   onAdd,
   onDone,
+  kinds = ["mission", "order"],
 }: {
+  kinds?: TaskKind[];
   tasks: Task[] | null;
   today: string;
   tomorrow: string;
@@ -22,7 +24,7 @@ export function TodoLists({
   const [openId, setOpenId] = useState<string | null>(null);
   return (
     <div className="todo-lists">
-      {(["mission", "order"] as const).map((k) => {
+      {kinds.map((k) => {
         const list = (tasks ?? []).filter((t) => t.kind === k).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
         return (
           <section key={k} className={`todo-box todo-${k}`}>
