@@ -59,6 +59,7 @@ export const api = {
   confirmBooking: call<{ token: string; index: number; format: MeetFormat; address?: string }, { ok: boolean; reason?: string; start?: string; end?: string; meetingUrl?: string; format?: MeetFormat; place?: string }>("confirmBooking"),
   declineBooking: call<{ token: string }, { ok: boolean }>("declineBooking"),
   cancelOneToOne: call<{ id: string }, { ok: boolean; calendarOk?: boolean }>("cancelOneToOne"),
+  summarizeTask: call<{ text: string; kind: TaskKind }, { ok: boolean; summary?: TaskSummary; reason?: string }>("summarizeTask"),
 };
 
 /** 1to1のやり方。来店がいちばんのおすすめ */
@@ -165,4 +166,34 @@ export function saveMemo(m: Omit<Memo, "id" | "createdAt">) {
 /** メモの中身をひとことで（「また話したい・田中さんとつなぐ・…」） */
 export function memoSummary(m: Memo) {
   return [...m.tags, ...m.connect.map((n) => `${n}さんとつなぐ`), m.text].filter(Boolean).join("・");
+}
+
+/** ホームの「ミッション」「注文・依頼」 */
+export type TaskKind = "mission" | "order";
+export interface TaskSummary {
+  title: string;
+  who: string;
+  due: string; // YYYY-MM-DD か空
+  todo: string[];
+  reply: string;
+}
+export interface Task extends TaskSummary {
+  id: string;
+  kind: TaskKind;
+  raw: string;
+  status: "open" | "done";
+  byName?: string;
+  createdAt?: Timestamp;
+  doneAt?: Timestamp;
+}
+export const TASK_LABEL: Record<TaskKind, string> = { mission: "ミッション", order: "注文・依頼" };
+export const openTasksQuery = () => query(collection(db, "tasks"), where("status", "==", "open"));
+export function addTodo(t: Omit<Task, "id" | "status" | "createdAt" | "doneAt">) {
+  return addDoc(collection(db, "tasks"), { ...t, status: "open", createdAt: serverTimestamp() });
+}
+export function finishTask(id: string) {
+  return updateDoc(doc(db, "tasks", id), { status: "done", doneAt: serverTimestamp() });
+}
+export function deleteTask(id: string) {
+  return deleteDoc(doc(db, "tasks", id));
 }

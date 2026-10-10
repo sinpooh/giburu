@@ -1,0 +1,85 @@
+import { useState } from "react";
+import { TASK_LABEL, Task, TaskKind, finishTask } from "../lib/data";
+import { lineUrlFor } from "../lib/replies";
+
+const dueLabel = (due: string, today: string, tomorrow: string) =>
+  !due ? "" : due < today ? "期限すぎ" : due === today ? "今日まで" : due === tomorrow ? "明日まで" : `${Number(due.slice(5, 7))}/${Number(due.slice(8, 10))}まで`;
+
+/** ホームの「🎯 ミッション」「📦 注文・依頼」。期限の近い順。✓で完了 */
+export function TodoLists({
+  tasks,
+  today,
+  tomorrow,
+  onAdd,
+  onDone,
+}: {
+  tasks: Task[] | null;
+  today: string;
+  tomorrow: string;
+  onAdd?: (k: TaskKind) => void;
+  onDone: (t: Task) => void;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  return (
+    <div className="todo-lists">
+      {(["mission", "order"] as const).map((k) => {
+        const list = (tasks ?? []).filter((t) => t.kind === k).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
+        return (
+          <section key={k} className={`todo-box todo-${k}`}>
+            <div className="row between center-y">
+              <b>
+                {k === "mission" ? "🎯 " : "📦 "}
+                {TASK_LABEL[k]} <span className="muted small">{list.length ? `${list.length}件` : ""}</span>
+              </b>
+              {onAdd && (
+                <button className="btn ghost small" onClick={() => onAdd(k)}>
+                  ＋ 追加
+                </button>
+              )}
+            </div>
+            {list.length === 0 && <p className="muted small">いまはなし！</p>}
+            {list.map((t) => {
+              const d = dueLabel(t.due, today, tomorrow);
+              const hot = !!t.due && t.due <= today;
+              const open = openId === t.id;
+              return (
+                <div key={t.id} className="todo-item">
+                  <button className="todo-check" aria-label="完了" onClick={() => (finishTask(t.id), onDone(t))}>
+                    ✓
+                  </button>
+                  <div className="grow" onClick={() => setOpenId(open ? null : t.id)}>
+                    <div>
+                      {t.title}
+                      {d && <span className={`todo-due ${hot ? "hot" : ""}`}>{d}</span>}
+                    </div>
+                    {t.who && <div className="muted small">{t.who}さん</div>}
+                    {open && (
+                      <div className="todo-detail" onClick={(e) => e.stopPropagation()}>
+                        {t.todo.length > 0 && (
+                          <ul>
+                            {t.todo.map((x) => (
+                              <li key={x}>{x}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {t.reply && (
+                          <>
+                            <pre className="line-text">{t.reply}</pre>
+                            <button className="btn primary small" onClick={() => window.open(lineUrlFor(t.reply), "_blank")}>
+                              LINEで返信
+                            </button>
+                          </>
+                        )}
+                        {t.raw && <p className="muted small">もとの文：{t.raw.slice(0, 200)}</p>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}

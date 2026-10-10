@@ -13,6 +13,10 @@ import { LineReplyForm } from "../components/LineReplyForm";
 import { ReferralForm } from "../components/ReferralForm";
 import { lineUrlFor } from "../lib/replies";
 import { MemoForm } from "../components/MemoForm";
+import { TodoForm } from "../components/TodoForm";
+import { TodoLists } from "../components/TodoLists";
+import { Task, TaskKind, addTodo, openTasksQuery } from "../lib/data";
+import { ymd } from "../lib/time";
 import { memoSummary, memosQuery, saveMemo } from "../lib/data";
 import { pushState } from "../lib/push";
 
@@ -42,6 +46,8 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
   const [refFor, setRefFor] = useState<Card | null>(null);
   const [bniTodo, setBniTodo] = useState<string | null>(null); // 記録したリファーラルの相手。BNIアプリにも入力してもらう
   const memos = useQuery<Memo>(memosQuery());
+  const tasks = useQuery<Task>(openTasksQuery());
+  const [addingTask, setAddingTask] = useState<TaskKind | null>(null);
   const [memoFor, setMemoFor] = useState<{ oneToOneId: string; memberId: string; memberName: string } | null>(null);
   const calendar = useDoc<{ connected?: boolean }>(doc(db, "settings", "calendar"));
   const praises = useQuery<{ id: string; text: string; byName: string }>(readOnly ? null : query(collection(db, "praises"), where("seen", "==", false)));
@@ -241,6 +247,24 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
           </span>
           <span className="line-add-plus">＋</span>
         </button>
+      )}
+      <TodoLists
+        tasks={tasks}
+        today={ymd(now)}
+        tomorrow={ymd(now + DAY)}
+        onAdd={isAoyama ? setAddingTask : undefined}
+        onDone={(t) => praise(t.kind === "order" ? `「${t.title}」完了！お客さんも喜びます` : `ミッション「${t.title}」クリア！`)}
+      />
+      {addingTask && (
+        <TodoForm
+          kind={addingTask}
+          onCancel={() => setAddingTask(null)}
+          onSubmit={async (v) => {
+            await addTodo({ ...v, byName: me.name });
+            setAddingTask(null);
+            praise("覚えときます！あとは上から片づけるだけ");
+          }}
+        />
       )}
       {memoFor && (
         <MemoForm

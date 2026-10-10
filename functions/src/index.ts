@@ -12,6 +12,7 @@ import { DAY, HOUR, MIN, endOfJstDay, fmtRange, fmtSlot, isWeekend, jstParts, st
 import { Interval, Slot, currentSmokeKey, fillTemplate, pickSlots, rankMembers, slotsText, sortCards, periodLabel } from "./logic";
 import { SCOPES, busyIntervals, createEvent, deleteEvent, isConnected, oauthClient } from "./calendar";
 import { push, pushUid } from "./push";
+import { summarizeTask as aiSummarize } from "./ai";
 
 initializeApp();
 // GoogleカレンダーのOAuthクライアント（Secret Manager に保存。docs/SETUP.md の手順で登録）
@@ -642,7 +643,9 @@ export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/T
         await push("aoyama", "ギブる", `「${top.title}」今日までだよ〜。スワイプ1回で終わるよ`, `/?card=${top.id}`);
       } else {
         const lines = cards.filter((c) => c.type === "lineReply" && c.id !== top.id && (!c.snoozedUntil || c.snoozedUntil <= now.getTime())).length;
-        const extra = lines ? `／LINE返信もあと${lines}件` : "";
+        const todos = await db.collection("tasks").where("status", "==", "open").get();
+        const dueTodos = todos.docs.filter((t) => t.get("due") && t.get("due") <= ymd(now)).length;
+        const extra = (lines ? `／LINE返信もあと${lines}件` : "") + (dueTodos ? `／今日までのミッション・注文${dueTodos}件` : "");
         await push("aoyama", "一服タイム☕", `今日の1枚：${top.title}（スワイプ1回）${extra}`, `/?card=${top.id}`);
       }
     }
@@ -672,4 +675,18 @@ export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/T
 export const calendarStatus = onCall(async (req) => {
   requireAllowed(req);
   return { connected: await isConnected() };
+});
+
+// 「ミッション」「注文・依頼」：貼り付けたLINEや手打ちのメモをAIでまとめる
+export const summarizeTask = onCall({ timeoutSeconds: 120 }, async (req) => {
+  requireAllowed(req);
+  const text = String(req.data?.text ?? "").trim();
+  const kind = req.data?.kind === "mission" ? "mission" : "order";
+  if (!text) throw new HttpsError("invalid-argument", "文章が空です");
+  try {
+    return { ok: true, summary: await aiSummarize(text, kind, ymd(new Date())) };
+  } catch (e) {
+    logger.error("summarizeTask failed", e);
+    return { ok: false, reason: String((e as Error).message ?? e).slice(0, 200) };
+  }
 });
