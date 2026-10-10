@@ -4,11 +4,14 @@ import { pickSlots, sortCards, rankMembers, currentSmokeKey } from "../logic";
 import { DEFAULT_SETTINGS } from "../config";
 import { jstParts, jstDate } from "../time";
 
+// 曜日のお休みなしで基本の動きを確かめる
+const OPEN = { ...DEFAULT_SETTINGS, closedDays: [] };
+
 // 2026-10-05(月) 09:00 JST
 const now = jstDate(2026, 10, 5, 9, 0);
 
 test("3枠は別々の平日、10〜18時、午前・午後・夕方に散る", () => {
-  const slots = pickSlots(now, [], DEFAULT_SETTINGS);
+  const slots = pickSlots(now, [], OPEN);
   assert.equal(slots.length, 3);
   const days = new Set(slots.map((s) => jstParts(new Date(s.start)).d));
   assert.equal(days.size, 3);
@@ -23,10 +26,15 @@ test("3枠は別々の平日、10〜18時、午前・午後・夕方に散る", 
   assert.equal(jstParts(new Date(slots[0].start)).d, 8);
 });
 
+test("お休みの曜日（木曜）は候補に出さない", () => {
+  const slots = pickSlots(now, [], DEFAULT_SETTINGS);
+  for (const s of slots) assert.notEqual(jstParts(new Date(s.start)).wd, 4);
+});
+
 test("予定の前後30分を避ける", () => {
   // 10/8 10:00-12:30 が埋まっている → 13:00 以降
   const busy = [{ start: jstDate(2026, 10, 8, 10).getTime(), end: jstDate(2026, 10, 8, 12, 30).getTime() }];
-  const slots = pickSlots(now, busy, DEFAULT_SETTINGS);
+  const slots = pickSlots(now, busy, OPEN);
   const p = jstParts(new Date(slots[0].start));
   assert.equal(p.d, 8);
   assert.equal(p.hh, 13);
@@ -34,7 +42,7 @@ test("予定の前後30分を避ける", () => {
 
 test("終日埋まっている日は飛ばす", () => {
   const busy = [{ start: jstDate(2026, 10, 8).getTime(), end: jstDate(2026, 10, 9).getTime() }];
-  const slots = pickSlots(now, busy, DEFAULT_SETTINGS);
+  const slots = pickSlots(now, busy, OPEN);
   assert.equal(jstParts(new Date(slots[0].start)).d, 9);
 });
 

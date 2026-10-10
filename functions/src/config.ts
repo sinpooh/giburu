@@ -21,6 +21,7 @@ export interface AppSettings {
   rangeStartDays: number;
   rangeEndDays: number;
   includeWeekends: boolean;
+  closedDays: number[]; // 1to1の候補にしない曜日（0=日〜6=土）
   format: "online" | "inperson";
   meetingUrl: string;
   monthlyGoal: number;
@@ -41,6 +42,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   rangeStartDays: 3,
   rangeEndDays: 14,
   includeWeekends: false,
+  closedDays: [4], // 木曜定休（2026-10-10 シンプーさん）
   format: "online",
   meetingUrl: "",
   monthlyGoal: 6,

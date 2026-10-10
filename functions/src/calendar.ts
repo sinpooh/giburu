@@ -98,6 +98,7 @@ export async function createEvent(ev: {
     start: { dateTime: ev.start, timeZone: "Asia/Tokyo" },
     end: { dateTime: ev.end, timeZone: "Asia/Tokyo" },
     attendees: ev.attendeeEmail ? [{ email: ev.attendeeEmail }] : undefined,
+    colorId: "5", // 黄色（バナナ）。2026-10-10 シンプーさん指定
     reminders: { useDefault: false, overrides: [{ method: "popup", minutes: 60 }] },
   };
   const q = ev.attendeeEmail ? "?sendUpdates=all" : "";

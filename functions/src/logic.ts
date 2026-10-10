@@ -40,6 +40,7 @@ export function pickSlots(now: Date, busy: Interval[], s: AppSettings, count = 3
     const day = new Date(today.getTime() + i * DAY + 12 * 60 * MIN); // 正午で日付を確定
     const p = jstParts(day);
     if (!s.includeWeekends && (p.wd === 0 || p.wd === 6)) continue;
+    if ((s.closedDays ?? []).includes(p.wd)) continue;
 
     const free: { start: number; per: number }[] = [];
     for (let m = ws; m + s.durationMin <= we; m += 30) {

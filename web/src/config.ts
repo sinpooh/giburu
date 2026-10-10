@@ -17,6 +17,7 @@ export interface AppSettings {
   rangeStartDays: number;
   rangeEndDays: number;
   includeWeekends: boolean;
+  closedDays: number[];
   format: "online" | "inperson";
   meetingUrl: string;
   monthlyGoal: number;
@@ -30,7 +31,7 @@ export interface AppSettings {
 }
 
 // 画面で使う既定値（サーバ側の既定値は functions/src/config.ts）
-export const DEFAULTS: Pick<AppSettings, "workStart" | "workEnd" | "durationMin" | "bufferMin" | "format" | "meetingUrl" | "monthlyGoal" | "smokeTimes" | "weekendNotify" | "includeWeekends"> = {
+export const DEFAULTS: Pick<AppSettings, "workStart" | "workEnd" | "durationMin" | "bufferMin" | "format" | "meetingUrl" | "monthlyGoal" | "smokeTimes" | "weekendNotify" | "includeWeekends" | "closedDays"> = {
   workStart: "10:00",
   workEnd: "18:00",
   durationMin: 60,
@@ -41,4 +42,5 @@ export const DEFAULTS: Pick<AppSettings, "workStart" | "workEnd" | "durationMin"
   smokeTimes: ["10:30", "15:00", "19:30"],
   weekendNotify: false,
   includeWeekends: false,
+  closedDays: [4],
 };

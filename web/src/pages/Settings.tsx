@@ -126,6 +126,21 @@ export function Settings({ me, calendarResult }: { me: Me; calendarResult?: stri
           <input type="checkbox" checked={s.includeWeekends} onChange={(e) => save({ includeWeekends: e.target.checked })} />
           土日も候補に入れる
         </label>
+        <div className="small muted">お休みの曜日（候補に出しません）</div>
+        <div className="chips">
+          {["日", "月", "火", "水", "木", "金", "土"].map((w, i) => {
+            const closed = (s.closedDays ?? []).includes(i);
+            return (
+              <button
+                key={w}
+                className={`chip ${closed ? "on" : ""}`}
+                onClick={() => save({ closedDays: closed ? s.closedDays.filter((d) => d !== i) : [...(s.closedDays ?? []), i] })}
+              >
+                {w}
+              </button>
+            );
+          })}
+        </div>
         <div className="chips">
           <button className={`chip ${s.format === "online" ? "on" : ""}`} onClick={() => save({ format: "online" })}>
             オンライン
