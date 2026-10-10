@@ -4,7 +4,7 @@ import { db } from "../firebase";
 import { Me, isIOS, isStandalone, useDoc, useNow, useQuery, useSettings } from "../lib/hooks";
 import { CARD_META, Card, sortCards } from "../lib/cards";
 import { OneToOne, REASONS, Referral, WEEKLY_REFERRAL_GOAL, activeOneToOnesQuery, addLineReply, addReferral, api, finishCard, monthStats, openCardsQuery, referralStats, referralsQuery, snoozeCard } from "../lib/data";
-import { fmtCountdown, jst, nextSmokeTime, startOfMonth, startOfWeek } from "../lib/time";
+import { DAY, fmtCountdown, jst, nextSmokeTime, startOfMonth, startOfRefWeek } from "../lib/time";
 import { Bubble, Character, Mood } from "../components/Character";
 import { Meter } from "../components/Meter";
 import { SwipeCard } from "../components/SwipeCard";
@@ -206,7 +206,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
         <ReferralForm
           onCancel={() => setAddingRef(false)}
           onSubmit={async (v) => {
-            const before = referralStats(refs, now, startOfWeek(now), startOfMonth(now)).week;
+            const before = referralStats(refs, now, startOfRefWeek(now), startOfMonth(now)).week;
             await addReferral({ ...v, byName: me.name, byUid: me.user.uid });
             setAddingRef(false);
             if (before + 1 === WEEKLY_REFERRAL_GOAL) celebrate({ title: "今週のミッション達成！", sub: `${v.to}さんへのリファーラル、ナイスギブ！` });
@@ -283,16 +283,20 @@ function CardBody({ card, now, open, onToggle }: { card: Card; now: number; open
 
 /** 今週のリファーラル（チャプターのミッション：1週間に1件） */
 function RefMeter({ refs, now, onAdd }: { refs: Referral[] | null; now: number; onAdd?: () => void }) {
-  const { week, month } = referralStats(refs, now, startOfWeek(now), startOfMonth(now));
+  const { week, month } = referralStats(refs, now, startOfRefWeek(now), startOfMonth(now));
   const done = week >= WEEKLY_REFERRAL_GOAL;
+  const daysLeft = Math.floor((startOfRefWeek(now) + 7 * DAY - now) / DAY); // 0 = 今日が水曜（締め切り）
+  const hot = !done && daysLeft <= 1;
   return (
-    <div className={`ref-meter ${done ? "ref-done" : ""}`}>
+    <div className={`ref-meter ${done ? "ref-done" : ""} ${hot ? "ref-hot" : ""}`}>
       <div className="ref-left">
         <span className="small">今週のリファーラル</span>
         <b className="ref-big">
           {week} / {WEEKLY_REFERRAL_GOAL}件 {done ? "達成！🎉" : ""}
         </b>
-        <span className="small muted">今月 {month}件</span>
+        <span className="small muted">
+          {done ? "水曜までにBNIの入力も忘れずに！" : daysLeft === 0 ? "今日（水曜）が入力の締め切り！" : `入力の締め切り（水曜）まであと${daysLeft}日`}・今月 {month}件
+        </span>
       </div>
       {onAdd && (
         <button className="btn ref-add" onClick={onAdd}>

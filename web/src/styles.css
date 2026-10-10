@@ -910,3 +910,7 @@ textarea {
   color: #fff;
   font-weight: 800;
 }
+.ref-meter.ref-hot {
+  border-color: var(--red);
+  background: #fff1f1;
+}

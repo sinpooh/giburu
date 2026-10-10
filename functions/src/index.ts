@@ -577,6 +577,15 @@ export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/T
         await push("aoyama", "一服タイム☕", `今日の1枚：${top.title}（スワイプ1回）${extra}`, `/?card=${top.id}`);
       }
     }
+
+    // 水曜（リファーラル入力の締め切り）に今週まだ0件なら、やさしく1回だけ
+    const p = jstParts(now);
+    if (p.wd === 3 && state.get("refNudgeDay") !== ymd(now)) {
+      const weekStart = new Date(startOfJstDay(now).getTime() - 6 * DAY);
+      const refs = await db.collection("referrals").where("createdAt", ">=", Timestamp.fromDate(weekStart)).limit(1).get();
+      await stateRef.set({ refNudgeDay: ymd(now) }, { merge: true });
+      if (refs.empty) await push("aoyama", "今日はリファーラルの締め切り📝", "今週のリファーラルはまだ0件。紹介できそうな人、思い浮かんだら「＋記録」してね", "/");
+    }
   }
 
   // 4) 期限切れ → シンプーさんに1回だけ通知

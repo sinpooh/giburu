@@ -17,10 +17,10 @@ export function startOfDay(t: number): number {
 export function endOfDay(t: number): number {
   return startOfDay(t) + DAY - 1;
 }
-/** 週のはじまり（月曜0時） */
-export function startOfWeek(t: number): number {
+/** リファーラルの週のはじまり（木曜0時）。入力の締め切りが水曜・定例会が金曜（2026-10-10 シンプーさん） */
+export function startOfRefWeek(t: number): number {
   const p = jst(t);
-  return startOfDay(t) - ((p.wd + 6) % 7) * DAY;
+  return startOfDay(t) - ((p.wd + 3) % 7) * DAY;
 }
 export function startOfMonth(t: number): number {
   const p = jst(t);
