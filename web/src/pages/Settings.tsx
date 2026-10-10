@@ -118,7 +118,7 @@ export function Settings({ me, calendarResult }: { me: Me; calendarResult?: stri
         <div className="grid2">
           <Field label="開始" type="time" value={s.workStart} onSave={(v) => save({ workStart: v })} />
           <Field label="終了" type="time" value={s.workEnd} onSave={(v) => save({ workEnd: v })} />
-          <Field label="1回の長さ（分）" type="number" value={String(s.durationMin)} onSave={(v) => save({ durationMin: Number(v) || 60 })} />
+          <Field label="相手に見せる長さ（分）" type="number" value={String(s.durationMin)} onSave={(v) => save({ durationMin: Number(v) || 60 })} />
           <Field label="前後の余白（分）" type="number" value={String(s.bufferMin)} onSave={(v) => save({ bufferMin: Number(v) || 0 })} />
           <Field label="今月の目標（件）" type="number" value={String(s.monthlyGoal)} onSave={(v) => save({ monthlyGoal: Number(v) || 6 })} />
         </div>
@@ -141,15 +141,13 @@ export function Settings({ me, calendarResult }: { me: Me; calendarResult?: stri
             );
           })}
         </div>
-        <div className="chips">
-          <button className={`chip ${s.format === "online" ? "on" : ""}`} onClick={() => save({ format: "online" })}>
-            オンライン
-          </button>
-          <button className={`chip ${s.format === "inperson" ? "on" : ""}`} onClick={() => save({ format: "inperson" })}>
-            対面
-          </button>
+        <div className="small muted">相手は「来店（おすすめ）・Zoom・訪問」から選べます</div>
+        <Field label="来店のときのお店の住所" type="text" value={s.shopAddress ?? ""} onSave={(v) => save({ shopAddress: v })} />
+        <Field label="ZoomのURL（いつも同じもの）" type="url" value={s.meetingUrl} onSave={(v) => save({ meetingUrl: v })} />
+        <div className="grid2">
+          <Field label="カレンダーで確保する長さ（分）" type="number" value={String(s.holdMin ?? 90)} onSave={(v) => save({ holdMin: Number(v) || 90 })} />
+          <Field label="訪問の移動時間（片道・分）" type="number" value={String(s.visitTravelMin ?? 45)} onSave={(v) => save({ visitTravelMin: Number(v) || 0 })} />
         </div>
-        {s.format === "online" && <Field label="ZoomやMeetのURL（いつも同じもの）" type="url" value={s.meetingUrl} onSave={(v) => save({ meetingUrl: v })} />}
       </section>
 
       {me.role === "manager" && <Templates s={s} save={save} />}

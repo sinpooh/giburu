@@ -7,7 +7,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { randomBytes } from "node:crypto";
 
-import { ALLOWED, AppSettings, DEFAULT_SETTINGS, REGION, appUrl } from "./config";
+import { ALLOWED, AppSettings, DEFAULT_SETTINGS, FORMAT_LABEL, MEET_FORMATS, MeetFormat, REGION, appUrl } from "./config";
 import { DAY, HOUR, MIN, endOfJstDay, fmtRange, fmtSlot, isWeekend, jstParts, startOfJstDay, startOfJstMonth, startOfNextJstMonth, ymd } from "./time";
 import { Interval, Slot, currentSmokeKey, fillTemplate, pickSlots, rankMembers, slotsText, sortCards, periodLabel } from "./logic";
 import { SCOPES, busyIntervals, createEvent, isConnected, oauthClient } from "./calendar";
@@ -105,7 +105,9 @@ async function createProposal(now: Date, kind: ProposalKind, memberId?: string):
   const from = new Date(startOfJstDay(now).getTime() + s.rangeStartDays * DAY);
   const to = new Date(startOfJstDay(now).getTime() + (s.rangeEndDays + 1) * DAY);
   const { busy, calendar } = await allBusy(from, to);
-  const slots = pickSlots(now, busy, s);
+  // 確保する長さ（1.5時間）と、訪問を選ばれたときの移動時間まで入るように空きを探す
+  const fit = { ...s, durationMin: Math.max(s.durationMin, s.holdMin), bufferMin: Math.max(s.bufferMin, s.visitTravelMin) };
+  const slots = pickSlots(now, busy, fit).map((x) => ({ start: x.start, end: new Date(Date.parse(x.start) + s.durationMin * MIN).toISOString() }));
   if (slots.length === 0) return { reason: "no-slots" };
 
   const token = randomBytes(18).toString("base64url");
@@ -310,12 +312,15 @@ export const getBooking = onCall(async (req) => {
   return {
     status: expired ? "expired" : status,
     memberName: o.get("memberName"),
-    format: s.format,
+    formats: MEET_FORMATS,
     durationMin: s.durationMin,
+    shopAddress: s.shopAddress,
+    chosenFormat: o.get("format") ?? null,
+    place: o.get("place") ?? "",
     expiresAt: exp,
     slots: slots.map((x) => ({ start: x.start, end: x.end, taken: !!x.taken, label: fmtRange(new Date(x.start), new Date(x.end)), period: periodLabel(new Date(x.start)) })),
     confirmed: o.get("confirmedSlot") ?? null,
-    meetingUrl: status === "confirmed" && s.format === "online" ? s.meetingUrl : "",
+    meetingUrl: status === "confirmed" && o.get("format") === "online" ? s.meetingUrl : "",
   };
 });
 
@@ -325,15 +330,22 @@ export const confirmBooking = onCall(async (req) => {
   if (!o) throw new HttpsError("not-found", "リンクが見つかりません");
   const s = await getSettings();
   const slots: (Slot & { taken?: boolean })[] = o.get("slots") ?? [];
-  const slot = slots[index];
-  if (!slot || slot.taken) throw new HttpsError("invalid-argument", "その枠は選べません");
+  const picked = slots[index];
+  if (!picked || picked.taken) throw new HttpsError("invalid-argument", "その枠は選べません");
+  const format: MeetFormat = MEET_FORMATS.includes(req.data?.format) ? req.data.format : "store";
+  const address = String(req.data?.address ?? "").trim().slice(0, 200);
+  if (format === "visit" && !address) throw new HttpsError("invalid-argument", "訪問先の住所を入れてください");
+  const visit = format === "visit";
+  // 相手に見せるのは1時間。青山さんのカレンダーは holdMin（1.5時間）確保する
+  const slot = { start: picked.start, end: new Date(Date.parse(picked.start) + s.durationMin * MIN).toISOString() };
+  const pad = (visit ? s.visitTravelMin : s.bufferMin) * MIN;
 
-  // 選んだ瞬間にカレンダーを再チェック
+  // 選んだ瞬間にカレンダーを再チェック（確保する長さ・訪問は移動時間も空いているか）
   const start = Date.parse(slot.start);
-  const end = Date.parse(slot.end);
-  const cal = await busyIntervals(new Date(start - s.bufferMin * MIN), new Date(end + s.bufferMin * MIN));
-  if (cal && cal.some((b) => b.start < end && b.end > start)) {
-    slots[index] = { ...slot, taken: true };
+  const end = start + Math.max(s.durationMin, s.holdMin) * MIN;
+  const cal = await busyIntervals(new Date(start - pad), new Date(end + pad));
+  if (cal && cal.some((b) => b.start < end + pad && b.end > start - pad)) {
+    slots[index] = { ...picked, taken: true };
     await o.ref.update({ slots });
     return { ok: false, reason: "taken" };
   }
@@ -342,14 +354,15 @@ export const confirmBooking = onCall(async (req) => {
     const cur = await t.get(o.ref);
     const exp = linkExpiry(cur);
     if (!OPEN_LINK.includes(cur.get("status")) || (exp != null && exp < Date.now())) return false;
-    t.update(o.ref, { status: "confirmed", confirmedSlot: { start: slot.start, end: slot.end }, confirmedAt: FieldValue.serverTimestamp() });
+    t.update(o.ref, { status: "confirmed", confirmedSlot: { start: slot.start, end: slot.end }, format, place: visit ? address : "", confirmedAt: FieldValue.serverTimestamp() });
     return true;
   });
   if (!ok) throw new HttpsError("failed-precondition", "このリンクはもう使えません");
 
   const member = await db.doc(`members/${o.get("memberId")}`).get();
-  const location = s.format === "online" ? s.meetingUrl || "オンライン" : "対面（場所は調整）";
+  const location = format === "online" ? s.meetingUrl || "Zoom" : visit ? address : s.shopAddress || "お店";
   const desc = [
+    `やり方：${FORMAT_LABEL[format]}`,
     member.get("industry") && `業種：${member.get("industry")}`,
     member.get("memo") && `メモ：${member.get("memo")}`,
     member.get("lastOneToOne") && `前回の1to1：${member.get("lastOneToOne")}`,
@@ -358,15 +371,26 @@ export const confirmBooking = onCall(async (req) => {
     .filter(Boolean)
     .join("\n");
   let eventId: string | null = null;
+  const iso = (ms: number) => new Date(ms).toISOString();
+  const name = `${o.get("memberName")}さん`;
   try {
+    // 相手にも見える本体は1時間
     eventId = await createEvent({
-      summary: `1to1 ${o.get("memberName")}さん${o.get("company") ? `（${o.get("company")}）` : ""}`,
+      summary: `1to1【${FORMAT_LABEL[format]}】${name}${o.get("company") ? `（${o.get("company")}）` : ""}`,
       description: desc,
       location,
       start: slot.start,
       end: slot.end,
       attendeeEmail: member.get("email") || null,
     });
+    // ここから下は青山さんのカレンダーだけ（話が伸びたとき用の予備・訪問の移動）
+    const holdEnd = start + Math.max(s.durationMin, s.holdMin) * MIN;
+    if (holdEnd > Date.parse(slot.end))
+      await createEvent({ summary: `（予備）${name}との1to1が伸びたとき用`, description: "ギブるで確保", location: "", start: slot.end, end: iso(holdEnd) });
+    if (visit && s.visitTravelMin > 0) {
+      await createEvent({ summary: `移動（${name}の訪問へ）`, description: address, location: address, start: iso(start - s.visitTravelMin * MIN), end: slot.start });
+      await createEvent({ summary: `移動（${name}の訪問から）`, description: "", location: "", start: iso(holdEnd), end: iso(holdEnd + s.visitTravelMin * MIN) });
+    }
   } catch (e) {
     logger.error("createEvent failed", e);
   }
@@ -381,8 +405,8 @@ export const confirmBooking = onCall(async (req) => {
   await db.collection("cards").add({
     type: "confirmed",
     status: "open",
-    title: `${o.get("memberName")}さんと ${when}`,
-    sub: eventId ? "カレンダーに入れときました" : "（カレンダー未連携のため手で登録してください）",
+    title: `${o.get("memberName")}さんと ${when}【${FORMAT_LABEL[format]}】`,
+    sub: (visit ? `訪問先：${address}\n` : "") + (eventId ? "カレンダーに入れときました" : "（カレンダー未連携のため手で登録してください）"),
     oneToOneId: o.id,
     memberId: o.get("memberId"),
     monthCount: count,
@@ -391,10 +415,10 @@ export const confirmBooking = onCall(async (req) => {
     createdBy: "system",
     createdAt: FieldValue.serverTimestamp(),
   });
-  await push("aoyama", "決まった！🎉", `${o.get("memberName")}さんと ${when} に1to1。今月 ${count}/${goal}件`, "/");
-  await push("managerNotify", "1to1が決まりました", `青山さん × ${o.get("memberName")}さん ${when}（今月 ${count}/${goal}件）`, "/");
+  await push("aoyama", "決まった！🎉", `${o.get("memberName")}さんと ${when} に1to1（${FORMAT_LABEL[format]}）。今月 ${count}/${goal}件`, "/");
+  await push("managerNotify", "1to1が決まりました", `青山さん × ${o.get("memberName")}さん ${when}【${FORMAT_LABEL[format]}】（今月 ${count}/${goal}件）`, "/");
   if (milestone) await push("managers", "今月の1to1目標達成！🎉", `青山さんが今月${goal}件を達成しました。褒めてあげてください！`, "/");
-  return { ok: true, start: slot.start, end: slot.end, meetingUrl: s.format === "online" ? s.meetingUrl : "" };
+  return { ok: true, start: slot.start, end: slot.end, format, place: visit ? address : s.shopAddress, meetingUrl: format === "online" ? s.meetingUrl : "" };
 });
 
 /** 「どれも合わない」 */
@@ -464,7 +488,7 @@ export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/T
         type: "tomorrow",
         status: "open",
         title: `明日 ${o.get("memberName")}さんと1to1`,
-        sub: fmtRange(start, end) + (s.format === "online" ? "・オンライン" : "・対面"),
+        sub: fmtRange(start, end) + `・${FORMAT_LABEL[(o.get("format") as MeetFormat) ?? "store"] ?? "来店"}` + (o.get("place") ? `\n${o.get("place")}` : ""),
         oneToOneId: o.id,
         dueAt: Timestamp.fromDate(endOfJstDay(start)),
         createdBy: "system",

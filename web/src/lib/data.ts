@@ -56,15 +56,22 @@ export const api = {
   calendarAuthUrl: call<void, { url: string }>("calendarAuthUrl"),
   sendTestPush: call<void, { sent: number }>("sendTestPush"),
   getBooking: call<{ token: string }, BookingInfo>("getBooking"),
-  confirmBooking: call<{ token: string; index: number }, { ok: boolean; reason?: string; start?: string; end?: string; meetingUrl?: string }>("confirmBooking"),
+  confirmBooking: call<{ token: string; index: number; format: MeetFormat; address?: string }, { ok: boolean; reason?: string; start?: string; end?: string; meetingUrl?: string; format?: MeetFormat; place?: string }>("confirmBooking"),
   declineBooking: call<{ token: string }, { ok: boolean }>("declineBooking"),
 };
+
+/** 1to1のやり方。来店がいちばんのおすすめ */
+export type MeetFormat = "store" | "online" | "visit";
+export const FORMAT_LABEL: Record<MeetFormat, string> = { store: "来店", online: "Zoom", visit: "訪問" };
 
 export interface BookingInfo {
   status: string;
   memberName?: string;
-  format?: "online" | "inperson";
+  formats?: MeetFormat[];
   durationMin?: number;
+  shopAddress?: string;
+  chosenFormat?: MeetFormat | null;
+  place?: string;
   expiresAt?: number | null;
   slots?: { start: string; end: string; taken: boolean; label: string; period: string }[];
   confirmed?: Slot | null;
