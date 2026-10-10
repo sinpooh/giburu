@@ -92,7 +92,7 @@ function Shell({ me }: { me: Me }) {
       )}
       <main>
         {tab === "home" && <Home me={me} goSchedule={() => setTab("schedule")} goSettings={() => setTab("settings")} />}
-        {tab === "schedule" && <Schedule />}
+        {tab === "schedule" && <Schedule me={me} />}
         {tab === "members" && <Members key={importCsv.length} initialCsv={importCsv} />}
         {tab === "settings" && <Settings me={me} calendarResult={calendarResult} />}
         {tab === "watch" && <Watch me={me} />}

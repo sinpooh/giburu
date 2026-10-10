@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, limit, orderBy, query, serverTimestamp, Timestamp, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from "firebase/firestore";
 import { call, db } from "../firebase";
 import { startOfMonth, startOfNextMonth } from "./time";
 import { lineUrlFor } from "./replies";
@@ -142,4 +142,26 @@ export function referralStats(rows: Referral[] | null, now: number, weekStart: n
   const at = (r: Referral) => r.createdAt?.toMillis() ?? now;
   const list = rows ?? [];
   return { week: list.filter((r) => at(r) >= weekStart).length, month: list.filter((r) => at(r) >= monthStart).length };
+}
+
+/** 1to1のあとの「ひとことメモ」。memos/{oneToOneId} に1件 */
+export const MEMO_TAGS = ["また話したい", "紹介をもらえそう", "こちらから紹介できそう", "お客さんになりそう"] as const;
+export interface Memo {
+  id: string;
+  oneToOneId: string;
+  memberId: string;
+  memberName: string;
+  tags: string[];
+  connect: string[];
+  text: string;
+  byName?: string;
+  createdAt?: Timestamp;
+}
+export const memosQuery = () => query(collection(db, "memos"), orderBy("createdAt", "desc"), limit(100));
+export function saveMemo(m: Omit<Memo, "id" | "createdAt">) {
+  return setDoc(doc(db, "memos", m.oneToOneId), { ...m, createdAt: serverTimestamp() });
+}
+/** メモの中身をひとことで（「また話したい・田中さんとつなぐ・…」） */
+export function memoSummary(m: Memo) {
+  return [...m.tags, ...m.connect.map((n) => `${n}さんとつなぐ`), m.text].filter(Boolean).join("・");
 }

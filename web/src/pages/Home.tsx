@@ -3,7 +3,7 @@ import { collection, doc, query, updateDoc, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { Me, isIOS, isStandalone, useDoc, useNow, useQuery, useSettings } from "../lib/hooks";
 import { CARD_META, Card, sortCards } from "../lib/cards";
-import { OneToOne, REASONS, Referral, WEEKLY_REFERRAL_GOAL, activeOneToOnesQuery, addLineReply, addReferral, api, finishCard, monthStats, openCardsQuery, referralStats, referralsQuery, snoozeCard } from "../lib/data";
+import { Memo, OneToOne, REASONS, Referral, WEEKLY_REFERRAL_GOAL, activeOneToOnesQuery, addLineReply, addReferral, api, finishCard, monthStats, openCardsQuery, referralStats, referralsQuery, snoozeCard } from "../lib/data";
 import { DAY, fmtCountdown, jst, nextSmokeTime, startOfMonth, startOfRefWeek } from "../lib/time";
 import { Bubble, Character, Mood } from "../components/Character";
 import { Meter } from "../components/Meter";
@@ -12,6 +12,8 @@ import { Confetti, usePraise } from "../components/Praise";
 import { LineReplyForm } from "../components/LineReplyForm";
 import { ReferralForm } from "../components/ReferralForm";
 import { lineUrlFor } from "../lib/replies";
+import { MemoForm } from "../components/MemoForm";
+import { memoSummary, memosQuery, saveMemo } from "../lib/data";
 import { pushState } from "../lib/push";
 
 function greeting(now: number, smokeTimes: string[]): string {
@@ -35,6 +37,8 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
   const ones = useQuery<OneToOne>(activeOneToOnesQuery());
   const refs = useQuery<Referral>(referralsQuery());
   const [addingRef, setAddingRef] = useState(false);
+  const memos = useQuery<Memo>(memosQuery());
+  const [memoFor, setMemoFor] = useState<{ oneToOneId: string; memberId: string; memberName: string } | null>(null);
   const calendar = useDoc<{ connected?: boolean }>(doc(db, "settings", "calendar"));
   const praises = useQuery<{ id: string; text: string; byName: string }>(readOnly ? null : query(collection(db, "praises"), where("seen", "==", false)));
   const { praise, celebrate } = usePraise();
@@ -78,6 +82,8 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
         openLine(c.lineUrl);
         finishCard(c.id);
         praise();
+        // LINEから戻ってきたら「ひとことメモ」
+        if (c.oneToOneId && c.memberId) setMemoFor({ oneToOneId: c.oneToOneId, memberId: c.memberId, memberName: c.title.replace(/さんにお礼送る？$/, "") });
         break;
       case "lineReply":
         openLine(c.lineUrl ?? lineUrlFor(c.lineText ?? ""));
@@ -173,7 +179,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
           tone={top.type === "confirmed" ? "party" : "normal"}
         >
           {top.type === "confirmed" && <Confetti count={24} />}
-          <CardBody card={top} now={now} open={open} onToggle={() => setOpen(!open)} />
+          <CardBody card={top} now={now} open={open} onToggle={() => setOpen(!open)} lastMemo={top.memberId && top.type !== "thanks" ? (memos ?? []).find((m) => m.memberId === top.memberId) : undefined} />
         </SwipeCard>
       ) : (
         <div className="card center empty">
@@ -202,8 +208,20 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
           <span className="line-add-plus">＋</span>
         </button>
       )}
+      {memoFor && (
+        <MemoForm
+          name={memoFor.memberName}
+          onCancel={() => setMemoFor(null)}
+          onSubmit={async (v) => {
+            await saveMemo({ ...memoFor, ...v, byName: me.name });
+            setMemoFor(null);
+            praise("メモばっちり！次につながりますね");
+          }}
+        />
+      )}
       {addingRef && (
         <ReferralForm
+          memos={memos ?? []}
           onCancel={() => setAddingRef(false)}
           onSubmit={async (v) => {
             const before = referralStats(refs, now, startOfRefWeek(now), startOfMonth(now)).week;
@@ -228,7 +246,7 @@ export function Home({ me, readOnly = false, goSchedule, goSettings }: { me: Me;
   );
 }
 
-function CardBody({ card, now, open, onToggle }: { card: Card; now: number; open: boolean; onToggle: () => void }) {
+function CardBody({ card, now, open, onToggle, lastMemo }: { card: Card; now: number; open: boolean; onToggle: () => void; lastMemo?: Memo }) {
   const meta = CARD_META[card.type];
   const due = card.dueAt?.toMillis();
   const left = due ? due - now : null;
@@ -244,6 +262,7 @@ function CardBody({ card, now, open, onToggle }: { card: Card; now: number; open
       <h2 className="card-title">{card.title}</h2>
       {card.sub && <p className="muted">{card.sub}</p>}
       {card.hint && <p className="hint">💡 {card.hint}</p>}
+      {lastMemo && <p className="memo-line">📝 前回のメモ：{memoSummary(lastMemo)}</p>}
       {card.createdByName && card.type !== "lineReply" && <p className="muted small">{card.createdByName}さんから</p>}
       {card.slots && (
         <div className="slots">

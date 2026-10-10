@@ -914,3 +914,28 @@ textarea {
   border-color: var(--red);
   background: #fff1f1;
 }
+.chip .x {
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 0 0 0 4px;
+}
+.memo-line {
+  background: #fff7d6;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.9em;
+}
+.ref-ideas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ref-idea {
+  text-align: left;
+  border: 1px dashed var(--pink);
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 0.9em;
+}

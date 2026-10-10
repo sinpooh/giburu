@@ -1,14 +1,18 @@
 import { useQuery, useNow } from "../lib/hooks";
 import { useState } from "react";
-import { OneToOne, Referral, activeOneToOnesQuery, api, deleteReferral, referralsQuery } from "../lib/data";
+import { Memo, OneToOne, Referral, activeOneToOnesQuery, api, deleteReferral, memoSummary, memosQuery, referralsQuery, saveMemo } from "../lib/data";
+import { MemoForm } from "../components/MemoForm";
+import { Me } from "../lib/hooks";
 import { fmtDateTime, fmtRange } from "../lib/time";
 
-export function Schedule() {
+export function Schedule({ me }: { me?: Me }) {
   const now = useNow(60000);
   const rows = useQuery<OneToOne>(activeOneToOnesQuery());
   const [busy, setBusy] = useState<string | null>(null);
   const refs = useQuery<Referral>(referralsQuery());
   const [msg, setMsg] = useState("");
+  const memos = useQuery<Memo>(memosQuery());
+  const [editing, setEditing] = useState<OneToOne | null>(null);
   const cancel = async (o: OneToOne, what: string) => {
     const past = what === "記録";
     const note = past ? "今月の件数からも外れます。" : o.status === "confirmed" ? "カレンダーの予定も消えます。" : "送ったリンクも使えなくなります。";
@@ -69,14 +73,39 @@ export function Schedule() {
         <h3>最近やった1to1</h3>
         {past.length === 0 && <p className="muted">なし</p>}
         {past.map((o) => (
-          <div key={o.id} className="list-item muted">
-            {fmtDateTime(Date.parse(o.confirmedSlot!.start))} {o.memberName}さん
+          <div key={o.id} className="list-item">
+            <div className="muted">
+              {fmtDateTime(Date.parse(o.confirmedSlot!.start))} {o.memberName}さん
+            </div>
+            {(() => {
+              const m = memos?.find((x) => x.oneToOneId === o.id);
+              return (
+                <>
+                  {m && <div className="memo-line">📝 {memoSummary(m)}</div>}
+                  <button className="link-btn small" onClick={() => setEditing(o)}>
+                    {m ? "メモを直す" : "メモを書く"}
+                  </button>
+                </>
+              );
+            })()}
             <button className="link-btn small" disabled={busy === o.id} onClick={() => cancel(o, "記録")}>
               {busy === o.id ? "消しています…" : "テストだったので消す"}
             </button>
           </div>
         ))}
       </section>
+      {editing && (
+        <MemoForm
+          name={editing.memberName}
+          initial={memos?.find((x) => x.oneToOneId === editing.id)}
+          onCancel={() => setEditing(null)}
+          onSubmit={async (v) => {
+            await saveMemo({ oneToOneId: editing.id, memberId: editing.memberId, memberName: editing.memberName, ...v, byName: me?.name ?? "" });
+            setEditing(null);
+            setMsg("メモを残しました");
+          }}
+        />
+      )}
       <section>
         <h3>最近のリファーラル</h3>
         {(refs ?? []).length === 0 && <p className="muted">まだありません</p>}

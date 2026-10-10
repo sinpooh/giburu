@@ -2,19 +2,36 @@ import { useState } from "react";
 import { collection } from "firebase/firestore";
 import { db } from "../firebase";
 import { useQuery } from "../lib/hooks";
-import { Member } from "../lib/data";
+import { Member, Memo } from "../lib/data";
 import { Character } from "./Character";
 
 /** 「リファーラルを記録」：だれに紹介したか（と、ひとことメモ）だけ */
-export function ReferralForm({ onSubmit, onCancel }: { onSubmit: (v: { to: string; memo: string }) => Promise<void>; onCancel: () => void }) {
+export function ReferralForm({ memos = [], onSubmit, onCancel }: { memos?: Memo[]; onSubmit: (v: { to: string; memo: string }) => Promise<void>; onCancel: () => void }) {
   const members = useQuery<Member>(collection(db, "members"));
   const [to, setTo] = useState("");
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
+  // 「つなげたい人」「こちらから紹介できそう」のメモを紹介のヒントに出す（新しい順に最大4つ）
+  const ideas = memos
+    .flatMap((m) => [
+      ...m.connect.map((n) => ({ key: `${m.id}-${n}`, to: m.memberName, memo: `${n}さんとつなぐ`, label: `${m.memberName}さんに${n}さんを紹介` })),
+      ...(m.tags.includes("こちらから紹介できそう") && m.connect.length === 0 ? [{ key: m.id, to: m.memberName, memo: m.text, label: `${m.memberName}さんに紹介できそう${m.text ? `（${m.text}）` : ""}` }] : []),
+    ])
+    .slice(0, 4);
   return (
     <div className="sheet-bg" onClick={onCancel}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <h2>リファーラルを記録</h2>
+        {ideas.length > 0 && !to && (
+          <div className="ref-ideas">
+            <span className="small muted">1to1のメモから（タップで入ります）</span>
+            {ideas.map((x) => (
+              <button key={x.key} className="ref-idea" onClick={() => (setTo(x.to), setMemo(x.memo))}>
+                💡 {x.label}
+              </button>
+            ))}
+          </div>
+        )}
         <input autoFocus list="ref-member-names" value={to} onChange={(e) => setTo(e.target.value)} placeholder="だれに紹介した？（例：山田さん）" />
         <datalist id="ref-member-names">
           {(members ?? []).map((m) => (

@@ -18,6 +18,7 @@ service cloud.firestore {
     match /cards/{id} { allow read, write: if allowed(); }
     match /praises/{id} { allow read, write: if allowed(); }
     match /referrals/{id} { allow read, write: if allowed(); }
+    match /memos/{id} { allow read, write: if allowed(); }
     match /settings/app { allow read, write: if allowed(); }
 
     // サーバ（Cloud Functions）だけが書く
