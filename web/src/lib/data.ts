@@ -99,12 +99,13 @@ export function addTask(t: { type: "request" | "lineReply"; title: string; detai
   });
 }
 
-export function addLineReply(t: { name: string; lineText: string; dueAt: number; byName: string; byUid: string }) {
+export function addLineReply(t: { name: string; lineText: string; dueAt: number; quote?: string; byName: string; byUid: string }) {
   return addDoc(collection(db, "cards"), {
     type: "lineReply",
     status: "open",
     title: `${t.name}さんにLINE返信`,
     sub: t.lineText ? "返信の文面、用意しときました" : "",
+    ...(t.quote ? { detail: `相手のメッセージ：${t.quote.slice(0, 300)}` } : {}),
     lineText: t.lineText,
     lineUrl: lineUrlFor(t.lineText),
     dueAt: Timestamp.fromMillis(t.dueAt),

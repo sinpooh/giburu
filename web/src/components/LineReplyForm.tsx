@@ -3,7 +3,7 @@ import { collection } from "firebase/firestore";
 import { db } from "../firebase";
 import { useQuery } from "../lib/hooks";
 import { Member } from "../lib/data";
-import { REPLY_KINDS, ReplyKind, replyDraft } from "../lib/replies";
+import { REPLY_KINDS, ReplyKind, guessFromLine, replyDraft } from "../lib/replies";
 import { DueChoice, dueFrom } from "./TaskForm";
 import { Character } from "./Character";
 
@@ -12,7 +12,7 @@ export function LineReplyForm({
   onSubmit,
   onCancel,
 }: {
-  onSubmit: (v: { name: string; lineText: string; dueAt: number }) => Promise<void>;
+  onSubmit: (v: { name: string; lineText: string; dueAt: number; quote?: string }) => Promise<void>;
   onCancel: () => void;
 }) {
   const members = useQuery<Member>(collection(db, "members"));
@@ -23,6 +23,8 @@ export function LineReplyForm({
   const [choice, setChoice] = useState<DueChoice>("today");
   const [date, setDate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [quote, setQuote] = useState("");
+  const [pasteMsg, setPasteMsg] = useState("");
   const ok = name.trim() && (choice !== "date" || date);
 
   const changeName = (v: string) => {
@@ -35,10 +37,45 @@ export function LineReplyForm({
     setText(replyDraft(k, name.trim()));
   };
 
+  // LINEで長押し→コピーしたメッセージを貼り付けると、名前・返し方・期限を読み取る
+  const applyPaste = (raw: string) => {
+    if (!raw.trim()) return setPasteMsg("コピーされたメッセージが見つかりませんでした。LINEで長押し→「コピー」してから押してね");
+    const g = guessFromLine(raw, (members ?? []).map((m) => m.name));
+    setQuote(raw.trim());
+    if (g.name) setName(g.name);
+    setKind(g.kind);
+    setEdited(false);
+    setText(replyDraft(g.kind, g.name || name.trim()));
+    setChoice(g.due);
+    setPasteMsg(g.name ? "読み取りました！ちがうところだけ直してね" : "読み取りました！だれからかだけ入れてね");
+  };
+  const paste = async () => {
+    try {
+      applyPaste(await navigator.clipboard.readText());
+    } catch {
+      setPasteMsg("貼り付けできませんでした。下の欄に長押しで貼り付けてもOKです");
+      setQuote(" ");
+    }
+  };
+
   return (
     <div className="sheet-bg" onClick={onCancel}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <h2>LINE返信あとで</h2>
+        <button className="btn paste-btn" onClick={paste}>
+          📋 LINEのメッセージを貼り付け
+        </button>
+        {pasteMsg && <p className="small notice">{pasteMsg}</p>}
+        {quote && (
+          <textarea
+            rows={3}
+            className="quote"
+            value={quote.trim()}
+            placeholder="ここに長押しで貼り付け"
+            onChange={(e) => setQuote(e.target.value)}
+            onBlur={(e) => e.target.value.trim() && !name && applyPaste(e.target.value)}
+          />
+        )}
         <input autoFocus list="member-names" value={name} onChange={(e) => changeName(e.target.value)} placeholder="だれに返信？（例：山田さん）" />
         <datalist id="member-names">
           {(members ?? []).map((m) => (
@@ -92,7 +129,7 @@ export function LineReplyForm({
             onClick={async () => {
               setSaving(true);
               try {
-                await onSubmit({ name: name.trim().replace(/さん$/, ""), lineText: text.trim(), dueAt: dueFrom(choice, date) });
+                await onSubmit({ name: name.trim().replace(/さん$/, ""), lineText: text.trim(), dueAt: dueFrom(choice, date), quote: quote.trim() || undefined });
               } finally {
                 setSaving(false);
               }
