@@ -111,7 +111,7 @@ function Shell({ me }: { me: Me }) {
       )}
       <main>
         {tab === "home" && <Home me={me} goSchedule={() => setTab("oneToOne")} goSettings={() => setTab("settings")} goTab={setTab} />}
-        {tab === "oneToOne" && <OneToOnePage me={me} initialCsv={importCsv} />}
+        {tab === "oneToOne" && <OneToOnePage me={me} initialCsv={importCsv} goHome={() => setTab("home")} />}
         {tab === "mission" && <Todos me={me} kind="mission" />}
         {tab === "order" && <Todos me={me} kind="order" />}
         {tab === "members" && <Members key={importCsv.length} initialCsv={importCsv} />}
