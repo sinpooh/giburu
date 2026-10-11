@@ -22,6 +22,7 @@ export function TodoLists({
   onDone: (t: Task) => void;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [askId, setAskId] = useState<string | null>(null); // 「終わった？」の確認中
   return (
     <div className="todo-lists">
       {kinds.map((k) => {
@@ -46,7 +47,7 @@ export function TodoLists({
               const open = openId === t.id;
               return (
                 <div key={t.id} className="todo-item">
-                  <button className="todo-check" aria-label="完了" onClick={() => (finishTask(t.id), onDone(t))}>
+                  <button className={`todo-check ${askId === t.id ? "on" : ""}`} aria-label="完了" onClick={() => setAskId(askId === t.id ? null : t.id)}>
                     ✓
                   </button>
                   <div className="grow" onClick={() => setOpenId(open ? null : t.id)}>
@@ -55,6 +56,24 @@ export function TodoLists({
                       {d && <span className={`todo-due ${hot ? "hot" : ""}`}>{d}</span>}
                     </div>
                     {t.who && <div className="muted small">{t.who}さん</div>}
+                    {askId === t.id && (
+                      <div className="todo-ask" onClick={(e) => e.stopPropagation()}>
+                        <span className="small">終わった？</span>
+                        <button
+                          className="btn primary small"
+                          onClick={() => {
+                            setAskId(null);
+                            finishTask(t.id);
+                            onDone(t);
+                          }}
+                        >
+                          終わった！
+                        </button>
+                        <button className="btn ghost small" onClick={() => setAskId(null)}>
+                          まだ
+                        </button>
+                      </div>
+                    )}
                     {open && (
                       <div className="todo-detail" onClick={(e) => e.stopPropagation()}>
                         {t.todo.length > 0 && (
