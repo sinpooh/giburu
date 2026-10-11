@@ -23,8 +23,15 @@ export async function pushUid(uid: string, title: string, body: string, path = "
 
 async function sendTo(docs: DocumentSnapshot[], title: string, body: string, path: string): Promise<number> {
   let sent = 0;
-  // アイコンの赤い数字＝まだ終わっていない「ミッション」「依頼」の件数
-  const badge = docs.length ? (await getFirestore().collection("tasks").where("status", "==", "open").count().get()).data().count : 0;
+  // アイコンの赤い数字＝これからの1to1＋まだ終わっていない「ミッション」「依頼」の件数
+  let badge = 0;
+  if (docs.length) {
+    const db = getFirestore();
+    const tasks = (await db.collection("tasks").where("status", "==", "open").count().get()).data().count;
+    const now = new Date().toISOString();
+    const ones = (await db.collection("oneToOnes").where("status", "==", "confirmed").get()).docs.filter((o) => (o.get("confirmedSlot")?.end ?? "") >= now).length;
+    badge = tasks + ones;
+  }
   for (const u of docs) {
     const tokens: string[] = u.get("fcmTokens") ?? [];
     for (const token of tokens) {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getRedirectResult } from "firebase/auth";
 import { auth } from "./firebase";
 import { Me, useMe, useQuery } from "./lib/hooks";
-import { Task, openTasksQuery } from "./lib/data";
+import { OneToOne, Task, activeOneToOnesQuery, openTasksQuery } from "./lib/data";
 import { refreshPushToken } from "./lib/push";
 import { PraiseProvider } from "./components/Praise";
 import { Character } from "./components/Character";
@@ -72,13 +72,16 @@ function Shell({ me }: { me: Me }) {
     return () => removeEventListener("hashchange", onHash);
   }, []);
 
-  // ミッション・依頼の件数：タブの赤丸と、ホーム画面のアイコンの赤い数字
+  // これからの1to1・ミッション・依頼の件数：タブの赤丸と、ホーム画面のアイコンの赤い数字
   const tasks = useQuery<Task>(me.role === "manager" ? null : openTasksQuery());
+  const ones = useQuery<OneToOne>(me.role === "manager" ? null : activeOneToOnesQuery());
+  const nowIso = new Date().toISOString();
   const counts: Partial<Record<Tab, number>> = {
+    oneToOne: (ones ?? []).filter((o) => o.status === "confirmed" && o.confirmedSlot && o.confirmedSlot.end >= nowIso).length,
     mission: (tasks ?? []).filter((t) => t.kind === "mission").length,
     order: (tasks ?? []).filter((t) => t.kind === "order").length,
   };
-  const total = (counts.mission ?? 0) + (counts.order ?? 0);
+  const total = (counts.mission ?? 0) + (counts.order ?? 0) + (counts.oneToOne ?? 0);
   useEffect(() => {
     if (!tasks) return;
     const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
