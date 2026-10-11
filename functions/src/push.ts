@@ -23,6 +23,8 @@ export async function pushUid(uid: string, title: string, body: string, path = "
 
 async function sendTo(docs: DocumentSnapshot[], title: string, body: string, path: string): Promise<number> {
   let sent = 0;
+  // アイコンの赤い数字＝まだ終わっていない「ミッション」「依頼」の件数
+  const badge = docs.length ? (await getFirestore().collection("tasks").where("status", "==", "open").count().get()).data().count : 0;
   for (const u of docs) {
     const tokens: string[] = u.get("fcmTokens") ?? [];
     for (const token of tokens) {
@@ -30,7 +32,7 @@ async function sendTo(docs: DocumentSnapshot[], title: string, body: string, pat
         // data だけで送り、表示は Service Worker（web/src/sw.ts）が行う
         await getMessaging().send({
           token,
-          data: { title, body, link: appUrl() + path },
+          data: { title, body, link: appUrl() + path, badge: String(badge) },
           webpush: { headers: { Urgency: "high", TTL: String(6 * 60 * 60) } },
         });
         sent++;

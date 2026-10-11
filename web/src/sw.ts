@@ -21,6 +21,12 @@ self.addEventListener("push", (event) => {
     payload = {};
   }
   const d = (payload.data ?? payload) as Record<string, string>;
+  // アイコンの赤い数字（ミッション＋依頼の件数）
+  const nav = self.navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+  if (d.badge !== undefined) {
+    const n = Number(d.badge);
+    (n > 0 ? nav.setAppBadge?.(n) : nav.clearAppBadge?.())?.catch(() => undefined);
+  }
   event.waitUntil(
     self.registration.showNotification(d.title || "ギブる", {
       body: d.body || "",

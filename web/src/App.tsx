@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { getRedirectResult } from "firebase/auth";
 import { auth } from "./firebase";
-import { Me, useMe } from "./lib/hooks";
+import { Me, useMe, useQuery } from "./lib/hooks";
+import { Task, openTasksQuery } from "./lib/data";
 import { refreshPushToken } from "./lib/push";
 import { PraiseProvider } from "./components/Praise";
 import { Character } from "./components/Character";
@@ -71,6 +72,19 @@ function Shell({ me }: { me: Me }) {
     return () => removeEventListener("hashchange", onHash);
   }, []);
 
+  // ミッション・依頼の件数：タブの赤丸と、ホーム画面のアイコンの赤い数字
+  const tasks = useQuery<Task>(me.role === "manager" ? null : openTasksQuery());
+  const counts: Partial<Record<Tab, number>> = {
+    mission: (tasks ?? []).filter((t) => t.kind === "mission").length,
+    order: (tasks ?? []).filter((t) => t.kind === "order").length,
+  };
+  const total = (counts.mission ?? 0) + (counts.order ?? 0);
+  useEffect(() => {
+    if (!tasks) return;
+    const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    (total > 0 ? nav.setAppBadge?.(total) : nav.clearAppBadge?.())?.catch(() => undefined);
+  }, [tasks, total]);
+
   const tabs: [Tab, string][] =
     me.role === "manager"
       ? [
@@ -105,6 +119,7 @@ function Shell({ me }: { me: Me }) {
         {tabs.map(([k, l]) => (
           <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
             {l}
+            {!!counts[k] && <span className="tab-badge">{counts[k]}</span>}
           </button>
         ))}
       </nav>
