@@ -2,7 +2,7 @@ import { AnthropicVertex } from "@anthropic-ai/vertex-sdk";
 
 // Google Cloud（Vertex AI）経由でClaudeを呼ぶ。鍵は不要で、関数のサービスアカウントの権限で動く。
 // 料金はFirebaseと同じGoogleの請求にまとまる（予算アラートの対象）。
-const MODEL = "claude-opus-5-5";
+const MODEL = "claude-haiku-5-5"; // 2026-10-11 シンプーさん「簡単なAIでいい」
 let client: AnthropicVertex | null = null;
 const ai = () => (client ??= new AnthropicVertex({ projectId: process.env.GCLOUD_PROJECT ?? "giburu-178f1", region: "global" }));
 
