@@ -120,7 +120,7 @@ export function Booking({ token }: { token: string }) {
               {f === "store" && <span className="tag-reco">おすすめ</span>}
             </b>
             <span className="muted small">
-              {f === "store" && `お店を見てもらえて、店長も顔を出せることがあります${info.shopAddress ? `（${info.shopAddress}）` : ""}`}
+              {f === "store" && `お店を見てもらえて、社長も顔を出せることがあります${info.shopAddress ? `（${info.shopAddress}）` : ""}`}
               {f === "online" && "Zoomでオンライン"}
               {f === "visit" && `${info.memberName}さんのところへ青山さんが伺います`}
             </span>
