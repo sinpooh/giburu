@@ -20,7 +20,7 @@ export function Todos({ me, kind }: { me: Me; kind: TaskKind }) {
         {kind === "mission" ? "🎯 " : "📦 "}
         {TASK_LABEL[kind]}
       </h1>
-      <div className="row gap center-y">
+      <div className="center">
         <Character mood={count ? "guide" : "praise"} size={70} say={count ? "上から1つずつ片づけよ！" : "ぜんぶ終わり！さすが！"} />
       </div>
       <button className="btn primary todo-add-big" onClick={() => setAdding(true)}>
