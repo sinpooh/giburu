@@ -1,7 +1,7 @@
 import { Timestamp } from "firebase/firestore";
 import { DAY, startOfDay } from "./time";
 
-export type CardType = "proposal" | "noReply" | "differentDay" | "confirmed" | "tomorrow" | "thanks" | "request" | "lineReply" | "followUp" | "giveRemind";
+export type CardType = "proposal" | "noReply" | "differentDay" | "confirmed" | "tomorrow" | "thanks" | "request" | "lineReply" | "followUp" | "giveRemind" | "greet";
 
 export interface Card {
   id: string;
@@ -38,7 +38,7 @@ export function sortCards(cards: Card[], now: number): Card[] {
     const due = ms(c.dueAt);
     if (due && due < endToday) return 0;
     if (WAITING_OTHERS.includes(c.type)) return 1;
-    if (c.type === "request" || c.type === "lineReply" || c.type === "followUp" || c.type === "giveRemind") return 2;
+    if (c.type === "request" || c.type === "lineReply" || c.type === "followUp" || c.type === "giveRemind" || c.type === "greet") return 2;
     return 3;
   };
   return cards
@@ -58,4 +58,5 @@ export const CARD_META: Record<CardType, { label: string; right: string; left: s
   lineReply: { label: "LINE返信", right: "LINEで返信", left: "あとで" },
   followUp: { label: "その後どう？", right: "LINEで送る", left: "あとで" },
   giveRemind: { label: "つなげました？", right: "紹介した！", left: "今回はなし" },
+  greet: { label: "名刺のあいさつ", right: "LINEで送る", left: "あとで" },
 };

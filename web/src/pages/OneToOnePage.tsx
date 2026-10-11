@@ -57,7 +57,7 @@ export function OneToOnePage({ me, initialCsv = "", goHome }: { me: Me; initialC
           </button>
         </div>
       </div>
-      {seg === "schedule" ? <Schedule me={me} /> : <Members key={initialCsv.length} initialCsv={initialCsv} />}
+      {seg === "schedule" ? <Schedule me={me} /> : <Members key={initialCsv.length} initialCsv={initialCsv} byName={me.name} onCardAdded={(n) => setMsg(`${n}さんを登録しました！ホームにあいさつLINEのカードが出ています`)} />}
     </div>
   );
 }

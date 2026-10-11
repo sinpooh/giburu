@@ -12,7 +12,7 @@ import { DAY, HOUR, MIN, endOfJstDay, fmtRange, fmtSlot, isWeekend, jstParts, st
 import { Interval, Slot, currentSmokeKey, familyName, fillTemplate, pickSlots, rankMembers, slotsText, sortCards, periodLabel } from "./logic";
 import { SCOPES, busyIntervals, calendarEvents, createEvent, deleteEvent, isConnected, oauthClient } from "./calendar";
 import { push, pushUid } from "./push";
-import { summarizeTask as aiSummarize } from "./ai";
+import { readBusinessCard, summarizeTask as aiSummarize } from "./ai";
 
 initializeApp();
 // GoogleカレンダーのOAuthクライアント（Secret Manager に保存。docs/SETUP.md の手順で登録）
@@ -722,4 +722,17 @@ export const avoidedEvents = onCall(async (req) => {
   const evs = await calendarEvents(from, to);
   if (!evs) return { connected: false, events: [] };
   return { connected: true, rangeStartDays: s.rangeStartDays, rangeEndDays: s.rangeEndDays, events: evs.slice(0, 200) };
+});
+
+// 「📇 名刺を撮る」：写真から名前・会社などを読み取る（保存は画面側で）
+export const readCard = onCall({ timeoutSeconds: 120 }, async (req) => {
+  requireAllowed(req);
+  const image = typeof req.data?.image === "string" ? req.data.image : "";
+  if (!image) throw new HttpsError("invalid-argument", "写真がありません");
+  try {
+    return { ok: true, card: await readBusinessCard(image) };
+  } catch (e) {
+    logger.error("readCard failed", e);
+    return { ok: false, reason: String((e as Error).message ?? e).slice(0, 200) };
+  }
 });

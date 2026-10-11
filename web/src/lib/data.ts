@@ -30,7 +30,62 @@ export interface Member {
   lastOneToOne?: string | null;
   memo?: string;
   doNotInvite?: boolean;
-  outside?: boolean; // メンバー以外の人（1to1の相手として入れた）
+  outside?: boolean; // メンバー以外の人（1to1の相手として入れた・名刺から登録した）
+  title?: string;
+  phone?: string;
+  address?: string;
+  metAt?: string; // 会った場所（定例会・交流会・お店…）
+  metOn?: string; // 名刺をもらった日 YYYY-MM-DD
+  hasCard?: boolean;
+}
+export interface CardInfo {
+  name: string;
+  company: string;
+  title: string;
+  industry: string;
+  phone: string;
+  email: string;
+  address: string;
+}
+export const MET_PLACES = ["定例会", "交流会", "お店", "その他"] as const;
+
+/** 名刺から登録：メンバー外として members に入れ、写真は cardPhotos に、あいさつLINEのカードをホームに出す */
+export async function addFromBusinessCard(c: CardInfo, metAt: string, photo: string, today: string, byName: string) {
+  const ref = await addDoc(collection(db, "members"), {
+    name: c.name,
+    company: c.company,
+    industry: c.industry,
+    title: c.title,
+    phone: c.phone,
+    email: c.email,
+    address: c.address,
+    metAt,
+    metOn: today,
+    outside: true,
+    hasCard: !!photo,
+    lastOneToOne: null,
+    doNotInvite: false,
+  });
+  if (photo) await setDoc(doc(db, "cardPhotos", ref.id), { memberId: ref.id, data: photo, createdAt: serverTimestamp() });
+  const family = c.name.trim().split(/[ \u3000]+/)[0];
+  const where = metAt && metAt !== "その他" ? `先日は${metAt}で` : "先日は";
+  const lineText = `${family}さん、${where}名刺交換ありがとうございました！\nリサイクルショップの青山です😊\nまたぜひゆっくりお話しさせてください。\nお店にも気軽に遊びに来てくださいね✨`;
+  const end = new Date(`${today}T23:59:59+09:00`);
+  await addDoc(collection(db, "cards"), {
+    type: "greet",
+    status: "open",
+    title: `${family}さんにあいさつLINE送る？`,
+    sub: [c.company, metAt && `${metAt}で名刺交換`].filter(Boolean).join("・"),
+    hint: "その日のうちに送ると覚えてもらえます",
+    memberId: ref.id,
+    lineText,
+    lineUrl: lineUrlFor(lineText),
+    dueAt: Timestamp.fromDate(end),
+    createdBy: "system",
+    createdByName: byName,
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
 }
 
 export const openCardsQuery = () => query(collection(db, "cards"), where("status", "==", "open"));
@@ -61,6 +116,7 @@ export const api = {
   declineBooking: call<{ token: string }, { ok: boolean }>("declineBooking"),
   cancelOneToOne: call<{ id: string }, { ok: boolean; calendarOk?: boolean }>("cancelOneToOne"),
   avoidedEvents: call<void, { connected: boolean; rangeStartDays?: number; rangeEndDays?: number; events: { title: string; start: number; end: number; allDay: boolean; avoided: boolean }[] }>("avoidedEvents"),
+  readCard: call<{ image: string }, { ok: boolean; card?: CardInfo; reason?: string }>("readCard"),
   summarizeTask: call<{ text: string; kind: TaskKind; images?: string[] }, { ok: boolean; summary?: TaskSummary; reason?: string }>("summarizeTask"),
 };
 

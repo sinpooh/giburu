@@ -75,3 +75,58 @@ export async function summarizeTask(text: string, kind: TaskKind, today: string,
     reply: String(out.reply ?? "").slice(0, 400),
   };
 }
+
+// ---------- 名刺の読み取り ----------
+
+export interface CardInfo {
+  name: string; // 「山田 太郎」のように苗字と名前の間にスペース
+  company: string;
+  title: string; // 役職
+  industry: string; // 業種（名刺から推測、短く）
+  phone: string;
+  email: string;
+  address: string;
+}
+
+const CARD_SCHEMA = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    company: { type: "string" },
+    title: { type: "string" },
+    industry: { type: "string" },
+    phone: { type: "string" },
+    email: { type: "string" },
+    address: { type: "string" },
+  },
+  required: ["name", "company", "title", "industry", "phone", "email", "address"],
+  additionalProperties: false,
+} as const;
+
+/** 名刺の写真（data URL）から名前・会社などを読み取る */
+export async function readBusinessCard(image: string): Promise<CardInfo> {
+  const m = image.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/);
+  if (!m) throw new Error("bad image");
+  const res = await ai().messages.create({
+    model: MODEL,
+    max_tokens: 2000,
+    output_config: { effort: "low", format: { type: "json_schema", schema: CARD_SCHEMA } },
+    system:
+      "名刺の写真から情報を読み取ります。写っている文字だけを使い、ないものは空にしてください。name は日本人なら「山田 太郎」のように苗字と名前の間に半角スペースを入れます。industry は会社名や肩書きから「不動産」「保険」「リフォーム」のように短く。",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: m[1] as "image/jpeg" | "image/png" | "image/webp" | "image/gif", data: m[2] } },
+          { type: "text", text: "この名刺を読み取ってください。" },
+        ],
+      },
+    ],
+  });
+  if (res.stop_reason === "refusal") throw new Error("refusal");
+  const block = res.content.find((b) => b.type === "text");
+  if (!block || block.type !== "text") throw new Error("no text");
+  const o = JSON.parse(block.text) as Partial<CardInfo>;
+  const str = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
+  return { name: str(o.name, 40), company: str(o.company, 60), title: str(o.title, 40), industry: str(o.industry, 30), phone: str(o.phone, 30), email: str(o.email, 80), address: str(o.address, 120) };
+}

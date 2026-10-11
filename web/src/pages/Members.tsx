@@ -4,6 +4,8 @@ import { db } from "../firebase";
 import { useQuery } from "../lib/hooks";
 import { Member } from "../lib/data";
 import { csvToMembers } from "../lib/csv";
+import { CardScan } from "../components/CardScan";
+import { useDoc } from "../lib/hooks";
 
 const FIELDS: [keyof Member, string, string][] = [
   ["name", "名前（必須）", "text"],
@@ -28,10 +30,11 @@ export function csvFromHash(): string {
   }
 }
 
-export function Members({ initialCsv = "" }: { initialCsv?: string }) {
+export function Members({ initialCsv = "", byName = "", onCardAdded }: { initialCsv?: string; byName?: string; onCardAdded?: (name: string) => void }) {
   const rows = useQuery<Member>(collection(db, "members"));
   const [edit, setEdit] = useState<Partial<Member> | null>(null);
   const [importing, setImporting] = useState(!!initialCsv);
+  const [scanning, setScanning] = useState(false);
   const list = [...(rows ?? [])].sort((a, b) => a.name.localeCompare(b.name, "ja"));
 
   return (
@@ -40,8 +43,21 @@ export function Members({ initialCsv = "" }: { initialCsv?: string }) {
         <h1>メンバー</h1>
         <span className="muted">{list.length}人</span>
       </div>
+      <button className="btn primary card-btn" onClick={() => setScanning(true)}>
+        📇 名刺を撮る
+      </button>
+      {scanning && (
+        <CardScan
+          byName={byName}
+          onCancel={() => setScanning(false)}
+          onDone={(n) => {
+            setScanning(false);
+            onCardAdded?.(n);
+          }}
+        />
+      )}
       <div className="row gap">
-        <button className="btn primary grow" onClick={() => setEdit({})}>
+        <button className="btn ghost grow" onClick={() => setEdit({})}>
           ＋ 追加
         </button>
         <button className="btn ghost grow" onClick={() => setImporting(true)}>
@@ -60,6 +76,8 @@ export function Members({ initialCsv = "" }: { initialCsv?: string }) {
             {[m.company, m.industry].filter(Boolean).join("・")}
             {m.doNotInvite ? "（今は誘わない）" : ""}
             {m.outside ? "（メンバー外）" : ""}
+            {m.hasCard ? " 📇" : ""}
+            {m.metAt ? `・${m.metAt}で` : ""}
           </div>
         </button>
       ))}
@@ -87,6 +105,12 @@ function MemberForm({ m, onClose }: { m: Partial<Member>; onClose: () => void })
     <div className="sheet-bg" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <h2>{m.id ? "メンバーを編集" : "メンバーを追加"}</h2>
+        {m.id && m.hasCard && <CardPhoto id={m.id} />}
+        {(m.phone || m.title || m.metOn) && (
+          <p className="small muted">
+            {[m.title, m.phone && `☎ ${m.phone}`, m.metOn && `${m.metOn}${m.metAt ? ` ${m.metAt}` : ""}で名刺交換`].filter(Boolean).join("・")}
+          </p>
+        )}
         {FIELDS.map(([k, label, type]) => (
           <label key={k} className="field">
             <span>{label}</span>
@@ -185,4 +209,9 @@ function CsvImport({ existing, initialText = "", onClose }: { existing: Member[]
       </div>
     </div>
   );
+}
+
+function CardPhoto({ id }: { id: string }) {
+  const p = useDoc<{ data?: string }>(doc(db, "cardPhotos", id));
+  return p?.data ? <img className="card-photo" src={p.data} alt="名刺" /> : null;
 }
