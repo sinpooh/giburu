@@ -46,39 +46,55 @@ const BASE = "https://www.googleapis.com/calendar/v3/calendars/primary";
 
 interface GEvent {
   status?: string;
+  summary?: string;
   transparency?: string;
   start?: { date?: string; dateTime?: string };
   end?: { date?: string; dateTime?: string };
 }
 
-/** 予定ありの時間帯。終日予定は「空き」扱いの設定でもその日全体を埋める */
-export async function busyIntervals(from: Date, to: Date): Promise<Interval[] | null> {
+export interface CalEvent {
+  title: string;
+  start: number;
+  end: number;
+  allDay: boolean;
+  avoided: boolean; // 1to1の候補からよけているか（「空き」扱いの時間指定の予定はよけない）
+}
+
+/** 青山さんのカレンダー（いつもの自分のカレンダー）の予定。つながっていなければ null */
+export async function calendarEvents(from: Date, to: Date): Promise<CalEvent[] | null> {
   const c = await authedClient();
   if (!c) return null;
-  const out: Interval[] = [];
+  const out: CalEvent[] = [];
   let pageToken: string | undefined;
   do {
     const q = new URLSearchParams({
       timeMin: from.toISOString(),
       timeMax: to.toISOString(),
       singleEvents: "true",
+      orderBy: "startTime",
       maxResults: "250",
     });
     if (pageToken) q.set("pageToken", pageToken);
     const data = await call<{ items?: GEvent[]; nextPageToken?: string }>(c, `${BASE}/events?${q}`);
     for (const ev of data.items ?? []) {
       if (ev.status === "cancelled") continue;
+      const title = ev.summary || "（タイトルなし）";
       if (ev.start?.date && ev.end?.date) {
         // 終日予定：日本時間のその日まるごと
-        out.push({ start: Date.parse(`${ev.start.date}T00:00:00+09:00`), end: Date.parse(`${ev.end.date}T00:00:00+09:00`) });
+        out.push({ title, start: Date.parse(`${ev.start.date}T00:00:00+09:00`), end: Date.parse(`${ev.end.date}T00:00:00+09:00`), allDay: true, avoided: true });
       } else if (ev.start?.dateTime && ev.end?.dateTime) {
-        if (ev.transparency === "transparent") continue;
-        out.push({ start: Date.parse(ev.start.dateTime), end: Date.parse(ev.end.dateTime) });
+        out.push({ title, start: Date.parse(ev.start.dateTime), end: Date.parse(ev.end.dateTime), allDay: false, avoided: ev.transparency !== "transparent" });
       }
     }
     pageToken = data.nextPageToken;
   } while (pageToken);
   return out;
+}
+
+/** 予定ありの時間帯。終日予定は「空き」扱いの設定でもその日全体を埋める */
+export async function busyIntervals(from: Date, to: Date): Promise<Interval[] | null> {
+  const evs = await calendarEvents(from, to);
+  return evs && evs.filter((e) => e.avoided).map((e) => ({ start: e.start, end: e.end }));
 }
 
 export async function createEvent(ev: {

@@ -1175,3 +1175,25 @@ textarea {
 .pick-item .muted {
   width: 100%;
 }
+.av-day {
+  margin-top: 8px;
+  font-weight: 700;
+}
+.av-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-top: 4px;
+  border: 1px solid var(--line);
+}
+.av-item.av-no {
+  background: #fff7d6;
+}
+.av-time {
+  flex: none;
+  font-size: 0.85em;
+  min-width: 82px;
+}

@@ -10,7 +10,7 @@ import { randomBytes } from "node:crypto";
 import { ALLOWED, AppSettings, DEFAULT_SETTINGS, FORMAT_LABEL, MEET_FORMATS, MeetFormat, REGION, appUrl } from "./config";
 import { DAY, HOUR, MIN, endOfJstDay, fmtRange, fmtSlot, isWeekend, jstParts, startOfJstDay, startOfJstMonth, startOfNextJstMonth, ymd } from "./time";
 import { Interval, Slot, currentSmokeKey, familyName, fillTemplate, pickSlots, rankMembers, slotsText, sortCards, periodLabel } from "./logic";
-import { SCOPES, busyIntervals, createEvent, deleteEvent, isConnected, oauthClient } from "./calendar";
+import { SCOPES, busyIntervals, calendarEvents, createEvent, deleteEvent, isConnected, oauthClient } from "./calendar";
 import { push, pushUid } from "./push";
 import { summarizeTask as aiSummarize } from "./ai";
 
@@ -710,4 +710,16 @@ export const summarizeTask = onCall({ timeoutSeconds: 120 }, async (req) => {
     logger.error("summarizeTask failed", e);
     return { ok: false, reason: String((e as Error).message ?? e).slice(0, 200) };
   }
+});
+
+// 設定画面「よけている予定を見る」：候補を探す期間のカレンダーの予定
+export const avoidedEvents = onCall(async (req) => {
+  requireAllowed(req);
+  const s = await getSettings();
+  const now = new Date();
+  const from = startOfJstDay(now);
+  const to = new Date(startOfJstDay(now).getTime() + (s.rangeEndDays + 1) * DAY);
+  const evs = await calendarEvents(from, to);
+  if (!evs) return { connected: false, events: [] };
+  return { connected: true, rangeStartDays: s.rangeStartDays, rangeEndDays: s.rangeEndDays, events: evs.slice(0, 200) };
 });

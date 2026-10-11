@@ -60,6 +60,7 @@ export const api = {
   confirmBooking: call<{ token: string; index: number; format: MeetFormat; address?: string }, { ok: boolean; reason?: string; start?: string; end?: string; meetingUrl?: string; format?: MeetFormat; place?: string }>("confirmBooking"),
   declineBooking: call<{ token: string }, { ok: boolean }>("declineBooking"),
   cancelOneToOne: call<{ id: string }, { ok: boolean; calendarOk?: boolean }>("cancelOneToOne"),
+  avoidedEvents: call<void, { connected: boolean; rangeStartDays?: number; rangeEndDays?: number; events: { title: string; start: number; end: number; allDay: boolean; avoided: boolean }[] }>("avoidedEvents"),
   summarizeTask: call<{ text: string; kind: TaskKind; images?: string[] }, { ok: boolean; summary?: TaskSummary; reason?: string }>("summarizeTask"),
 };
 

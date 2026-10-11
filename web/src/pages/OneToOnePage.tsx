@@ -3,6 +3,7 @@ import { Me, useNow, useQuery, useSettings } from "../lib/hooks";
 import { OneToOne, REASONS, activeOneToOnesQuery, api, monthStats } from "../lib/data";
 import { Meter } from "../components/Meter";
 import { Partner, PartnerPicker } from "../components/PartnerPicker";
+import { AvoidedEvents } from "../components/AvoidedEvents";
 import { Schedule } from "./Schedule";
 import { Members } from "./Members";
 
@@ -16,6 +17,7 @@ export function OneToOnePage({ me, initialCsv = "", goHome }: { me: Me; initialC
   const [msg, setMsg] = useState("");
   // 1to1の流れの入り口：候補カードを作ってホームへ（ホームでスワイプしてLINEで送る）
   const [picking, setPicking] = useState(false);
+  const [showAvoid, setShowAvoid] = useState(false);
   const newProposal = async (p: Partner) => {
     setPicking(false);
     setBusy(true);
@@ -39,6 +41,12 @@ export function OneToOnePage({ me, initialCsv = "", goHome }: { me: Me; initialC
         </button>
         <p className="small muted center">相手を選ぶ（おまかせもOK）と、空いている日にちを探してホームにカードを出します。カードを右にスワイプするとLINEで送れます</p>
         {msg && <p className="notice center">{msg}</p>}
+        <p className="center">
+          <button className="link-btn small" onClick={() => setShowAvoid(true)}>
+            📅 よけている予定を見る
+          </button>
+        </p>
+        {showAvoid && <AvoidedEvents onClose={() => setShowAvoid(false)} />}
         {picking && <PartnerPicker onPick={newProposal} onCancel={() => setPicking(false)} />}
         <div className="seg">
           <button className={seg === "schedule" ? "on" : ""} onClick={() => setSeg("schedule")}>
