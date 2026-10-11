@@ -13,7 +13,6 @@ import { LineReplyForm } from "../components/LineReplyForm";
 import { ReferralForm } from "../components/ReferralForm";
 import { lineUrlFor } from "../lib/replies";
 import { MemoForm } from "../components/MemoForm";
-import { Task, openTasksQuery } from "../lib/data";
 import { ymd } from "../lib/time";
 import { memoSummary, memosQuery, saveMemo } from "../lib/data";
 import { pushState } from "../lib/push";
@@ -44,7 +43,6 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
   const [refFor, setRefFor] = useState<Card | null>(null);
   const [bniTodo, setBniTodo] = useState<string | null>(null); // 記録したリファーラルの相手。BNIアプリにも入力してもらう
   const memos = useQuery<Memo>(memosQuery());
-  const tasks = useQuery<Task>(openTasksQuery());
   const [memoFor, setMemoFor] = useState<{ oneToOneId: string; memberId: string; memberName: string } | null>(null);
   const calendar = useDoc<{ connected?: boolean }>(doc(db, "settings", "calendar"));
   const praises = useQuery<{ id: string; text: string; byName: string }>(readOnly ? null : query(collection(db, "praises"), where("seen", "==", false)));
@@ -244,21 +242,6 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
           </span>
           <span className="line-add-plus">＋</span>
         </button>
-      )}
-      {tasks && tasks.length > 0 && (
-        <div className="todo-summary">
-          {(["mission", "order"] as const).map((k) => {
-            const list = tasks.filter((t) => t.kind === k);
-            const due = list.filter((t) => t.due && t.due <= ymd(now)).length;
-            return (
-              <button key={k} className={`todo-sum todo-${k}`} onClick={() => goTab?.(k)}>
-                <span>{k === "mission" ? "🎯 ミッション" : "📦 依頼"}</span>
-                <b>{list.length}件</b>
-                {due > 0 && <span className="todo-due hot">今日まで{due}件</span>}
-              </button>
-            );
-          })}
-        </div>
       )}
       {memoFor && (
         <MemoForm
