@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, increment, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from "firebase/firestore";
 import { call, db } from "../firebase";
 import { startOfMonth, startOfNextMonth } from "./time";
 import { lineUrlFor } from "./replies";
@@ -59,7 +59,7 @@ export const api = {
   confirmBooking: call<{ token: string; index: number; format: MeetFormat; address?: string }, { ok: boolean; reason?: string; start?: string; end?: string; meetingUrl?: string; format?: MeetFormat; place?: string }>("confirmBooking"),
   declineBooking: call<{ token: string }, { ok: boolean }>("declineBooking"),
   cancelOneToOne: call<{ id: string }, { ok: boolean; calendarOk?: boolean }>("cancelOneToOne"),
-  summarizeTask: call<{ text: string; kind: TaskKind }, { ok: boolean; summary?: TaskSummary; reason?: string }>("summarizeTask"),
+  summarizeTask: call<{ text: string; kind: TaskKind; images?: string[] }, { ok: boolean; summary?: TaskSummary; reason?: string }>("summarizeTask"),
 };
 
 /** 1to1のやり方。来店がいちばんのおすすめ */
@@ -181,6 +181,7 @@ export interface Task extends TaskSummary {
   id: string;
   kind: TaskKind;
   raw: string;
+  photoCount?: number;
   status: "open" | "done";
   byName?: string;
   createdAt?: Timestamp;
@@ -188,8 +189,26 @@ export interface Task extends TaskSummary {
 }
 export const TASK_LABEL: Record<TaskKind, string> = { mission: "ミッション", order: "注文・依頼" };
 export const openTasksQuery = () => query(collection(db, "tasks"), where("status", "==", "open"));
-export function addTodo(t: Omit<Task, "id" | "status" | "createdAt" | "doneAt">) {
-  return addDoc(collection(db, "tasks"), { ...t, status: "open", createdAt: serverTimestamp() });
+export async function addTodo(t: Omit<Task, "id" | "status" | "createdAt" | "doneAt" | "photoCount">, photos: string[] = []) {
+  const ref = await addDoc(collection(db, "tasks"), { ...t, photoCount: photos.length, status: "open", createdAt: serverTimestamp() });
+  for (const p of photos) await addTaskPhoto(ref.id, p, false);
+  return ref;
+}
+/** 写真は1枚ずつ taskPhotos に（タスク本体を軽くしておくため） */
+export interface TaskPhoto {
+  id: string;
+  taskId: string;
+  data: string; // data:image/jpeg;base64,...
+  createdAt?: Timestamp;
+}
+export const taskPhotosQuery = (taskId: string) => query(collection(db, "taskPhotos"), where("taskId", "==", taskId));
+export async function addTaskPhoto(taskId: string, data: string, bump = true) {
+  await addDoc(collection(db, "taskPhotos"), { taskId, data, createdAt: serverTimestamp() });
+  if (bump) await updateDoc(doc(db, "tasks", taskId), { photoCount: increment(1) });
+}
+export async function deleteTaskPhoto(p: TaskPhoto) {
+  await deleteDoc(doc(db, "taskPhotos", p.id));
+  await updateDoc(doc(db, "tasks", p.taskId), { photoCount: increment(-1) });
 }
 export function finishTask(id: string) {
   return updateDoc(doc(db, "tasks", id), { status: "done", doneAt: serverTimestamp() });

@@ -30,7 +30,7 @@ const SCHEMA = {
 } as const;
 
 const SYSTEM = `あなたはリサイクルショップで働く青山さんの手伝い役です。青山さんは予定やタスクの管理が苦手で、LINEが1日に100件以上来ます。
-渡された文章（LINEを貼り付けたもの、または手打ちのメモ）を読み、青山さんが「何を・だれに・いつまでに」やればいいかが一目でわかるようにまとめてください。
+渡された文章（LINEを貼り付けたもの、または手打ちのメモ）や写真（LINEのスクリーンショット、注文書、手書きメモ、商品の写真など）を読み、青山さんが「何を・だれに・いつまでに」やればいいかが一目でわかるようにまとめてください。
 - title: やることを20字くらいで。「〇〇さんの△△」のように具体的に
 - who: 依頼してきた人や相手の名前（さん付けなし）。わからなければ空
 - due: 期限を YYYY-MM-DD で。「明日」「金曜」などは今日の日付から計算。書かれていなければ空
@@ -38,7 +38,13 @@ const SYSTEM = `あなたはリサイクルショップで働く青山さんの�
 - reply: 相手に返事が必要なら、青山さんとして送るやわらかい丁寧なLINEの返信文（2〜3行、絵文字1つまで）。返事が不要なら空
 書かれていないことは作らないでください。`;
 
-export async function summarizeTask(text: string, kind: TaskKind, today: string): Promise<TaskSummary> {
+/** images は "data:image/jpeg;base64,..." の形（最大4枚） */
+export async function summarizeTask(text: string, kind: TaskKind, today: string, images: string[] = []): Promise<TaskSummary> {
+  const pics = images
+    .slice(0, 4)
+    .map((u) => u.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/))
+    .filter((m): m is RegExpMatchArray => !!m)
+    .map((m) => ({ type: "image" as const, source: { type: "base64" as const, media_type: m[1] as "image/jpeg" | "image/png" | "image/webp" | "image/gif", data: m[2] } }));
   const res = await ai().messages.create({
     model: MODEL,
     max_tokens: 4000,
@@ -47,7 +53,13 @@ export async function summarizeTask(text: string, kind: TaskKind, today: string)
     messages: [
       {
         role: "user",
-        content: `今日は ${today} です。種類：${kind === "mission" ? "ミッション（BNIや役割で頼まれた・決めたやること）" : "注文・依頼（お客さんや知り合いからの注文や頼まれごと）"}\n\n<text>\n${text.slice(0, 6000)}\n</text>`,
+        content: [
+          ...pics,
+          {
+            type: "text" as const,
+            text: `今日は ${today} です。種類：${kind === "mission" ? "ミッション（BNIや役割で頼まれた・決めたやること）" : "注文・依頼（お客さんや知り合いからの注文や頼まれごと）"}${pics.length ? `\n写真が${pics.length}枚あります。写真に写っている文字や内容も読み取ってください。` : ""}\n\n<text>\n${text.slice(0, 6000) || "（文章なし。写真だけ）"}\n</text>`,
+          },
+        ],
       },
     ],
   });

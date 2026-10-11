@@ -682,9 +682,10 @@ export const summarizeTask = onCall({ timeoutSeconds: 120 }, async (req) => {
   requireAllowed(req);
   const text = String(req.data?.text ?? "").trim();
   const kind = req.data?.kind === "mission" ? "mission" : "order";
-  if (!text) throw new HttpsError("invalid-argument", "文章が空です");
+  const images: string[] = Array.isArray(req.data?.images) ? req.data.images.filter((x: unknown) => typeof x === "string").slice(0, 4) : [];
+  if (!text && images.length === 0) throw new HttpsError("invalid-argument", "文章も写真もありません");
   try {
-    return { ok: true, summary: await aiSummarize(text, kind, ymd(new Date())) };
+    return { ok: true, summary: await aiSummarize(text, kind, ymd(new Date()), images) };
   } catch (e) {
     logger.error("summarizeTask failed", e);
     return { ok: false, reason: String((e as Error).message ?? e).slice(0, 200) };

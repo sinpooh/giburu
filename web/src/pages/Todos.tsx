@@ -37,8 +37,8 @@ export function Todos({ me, kind }: { me: Me; kind: TaskKind }) {
         <TodoForm
           kind={kind}
           onCancel={() => setAdding(false)}
-          onSubmit={async (v) => {
-            await addTodo({ ...v, byName: me.name });
+          onSubmit={async (v, photos) => {
+            await addTodo({ ...v, byName: me.name }, photos);
             setAdding(false);
             praise("覚えときます！あとは上から片づけるだけ");
           }}

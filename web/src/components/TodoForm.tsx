@@ -5,8 +5,10 @@ import { useQuery } from "../lib/hooks";
 import { Member, TASK_LABEL, TaskKind, TaskSummary, api } from "../lib/data";
 import { localSummary } from "../lib/replies";
 
-// AIでまとめるか（Google CloudでClaudeを有効にしたら true にする。2026-10-10 シンプーさん「とりあえずAIなし」）
-const USE_AI = false;
+import { shrinkImage } from "../lib/image";
+
+// AIでまとめるか（2026-10-11 シンプーさん「AI機能をつけたい」。つながらないときは文から名前・期限だけ読み取る）
+const USE_AI = true;
 import { Character } from "./Character";
 
 const EMPTY: TaskSummary = { title: "", who: "", due: "", todo: [], reply: "" };
@@ -21,7 +23,7 @@ export function TodoForm({
   onCancel,
 }: {
   kind: TaskKind;
-  onSubmit: (v: TaskSummary & { kind: TaskKind; raw: string }) => Promise<void>;
+  onSubmit: (v: TaskSummary & { kind: TaskKind; raw: string }, photos: string[]) => Promise<void>;
   onCancel: () => void;
 }) {
   const [kind, setKind] = useState<TaskKind>(initialKind);
@@ -29,26 +31,42 @@ export function TodoForm({
   const [sum, setSum] = useState<TaskSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
   const members = useQuery<Member>(collection(db, "members"));
 
-  const summarize = async (text: string) => {
-    if (!text.trim()) return;
+  const local = (text: string) => localSummary(text, (members ?? []).map((m) => m.name), Date.now());
+  const summarize = async (text: string, imgs = photos) => {
+    if (!text.trim() && imgs.length === 0) return;
     setMsg("");
     if (!USE_AI) {
-      setSum(localSummary(text, (members ?? []).map((m) => m.name), Date.now()));
+      setSum(local(text));
       return;
     }
     setBusy(true);
     try {
-      const r = await api.summarizeTask({ text, kind });
+      const r = await api.summarizeTask({ text, kind, images: imgs.slice(0, 4) });
       if (r.ok && r.summary) setSum(r.summary);
       else {
-        setSum({ ...EMPTY, title: text.trim().split(/\n/)[0].slice(0, 40) });
-        setMsg("うまくまとめられなかったので、1行目をそのまま入れました。直してね");
+        setSum(local(text));
+        setMsg("AIがうまくまとめられなかったので、読み取れたところだけ入れました。直してね");
       }
     } catch {
-      setSum({ ...EMPTY, title: text.trim().split(/\n/)[0].slice(0, 40) });
-      setMsg("いまAIにつながらないので、1行目をそのまま入れました。直してね");
+      setSum(local(text));
+      setMsg("いまAIにつながらないので、読み取れたところだけ入れました。直してね");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addPhotos = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setBusy(true);
+    try {
+      const add: string[] = [];
+      for (const f of Array.from(files).slice(0, 4)) add.push(await shrinkImage(f));
+      setPhotos((p) => [...p, ...add].slice(0, 4));
+    } catch {
+      setMsg("写真を読みこめませんでした");
     } finally {
       setBusy(false);
     }
@@ -82,14 +100,30 @@ export function TodoForm({
         {!sum && (
           <>
             <button className="btn paste-btn" onClick={paste} disabled={busy}>
-              📋 LINEを貼り付ける
+              📋 LINEを貼り付けてまとめる
             </button>
+            <label className="btn photo-btn">
+              📷 写真から（注文書・スクショ・商品など）
+              <input type="file" accept="image/*" multiple hidden onChange={(e) => (addPhotos(e.target.files), (e.target.value = ""))} />
+            </label>
             <textarea rows={4} value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="または、ここに手で書いてもOK（例：山田さんから冷蔵庫の取り置き、土曜まで）" />
             <div className="row gap center-y">
               <Character mood="guide" size={44} />
               <span className="small muted">{busy ? "まとめています…" : USE_AI ? "やること・相手・期限をまとめます" : "相手と期限は読み取れたら入ります"}</span>
             </div>
           </>
+        )}
+        {photos.length > 0 && (
+          <div className="photo-row">
+            {photos.map((p, i) => (
+              <span key={i} className="photo-thumb">
+                <img src={p} alt="" />
+                <button className="x" onClick={() => setPhotos(photos.filter((_, j) => j !== i))} aria-label="削除">
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
         )}
         {msg && <p className="small notice">{msg}</p>}
         {sum && (
@@ -133,7 +167,7 @@ export function TodoForm({
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await onSubmit({ ...sum, title: sum.title.trim(), who: sum.who.trim().replace(/さん$/, ""), todo: sum.todo.map((x) => x.trim()).filter(Boolean), kind, raw: raw.trim() });
+                  await onSubmit({ ...sum, title: sum.title.trim(), who: sum.who.trim().replace(/さん$/, ""), todo: sum.todo.map((x) => x.trim()).filter(Boolean), kind, raw: raw.trim() }, photos);
                 } finally {
                   setBusy(false);
                 }
@@ -142,8 +176,8 @@ export function TodoForm({
               追加する
             </button>
           ) : (
-            <button className="btn primary grow" disabled={!raw.trim() || busy} onClick={() => summarize(raw)}>
-              {busy ? "まとめています…" : "次へ"}
+            <button className="btn primary grow" disabled={(!raw.trim() && photos.length === 0) || busy} onClick={() => summarize(raw)}>
+              {busy ? "まとめています…" : USE_AI ? "AIでまとめる" : "次へ"}
             </button>
           )}
         </div>

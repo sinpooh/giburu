@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { TASK_LABEL, Task, TaskKind, finishTask } from "../lib/data";
+import { TASK_LABEL, Task, TaskKind, TaskPhoto, addTaskPhoto, deleteTaskPhoto, finishTask, taskPhotosQuery } from "../lib/data";
+import { useQuery } from "../lib/hooks";
+import { shrinkImage } from "../lib/image";
 import { lineUrlFor } from "../lib/replies";
 
 const dueLabel = (due: string, today: string, tomorrow: string) =>
@@ -55,7 +57,12 @@ export function TodoLists({
                       {t.title}
                       {d && <span className={`todo-due ${hot ? "hot" : ""}`}>{d}</span>}
                     </div>
-                    {t.who && <div className="muted small">{t.who}さん</div>}
+                    {(t.who || !!t.photoCount) && (
+                      <div className="muted small">
+                        {t.who ? `${t.who}さん` : ""}
+                        {t.photoCount ? ` 📷${t.photoCount}` : ""}
+                      </div>
+                    )}
                     {askId === t.id && (
                       <div className="todo-ask" onClick={(e) => e.stopPropagation()}>
                         <span className="small">終わった？</span>
@@ -92,6 +99,7 @@ export function TodoLists({
                           </>
                         )}
                         {t.raw && <p className="muted small">もとの文：{t.raw.slice(0, 200)}</p>}
+                        <Photos taskId={t.id} />
                       </div>
                     )}
                   </div>
@@ -101,6 +109,58 @@ export function TodoLists({
           </section>
         );
       })}
+    </div>
+  );
+}
+
+/** タスクにつけた写真。タップで大きく、＋で追加 */
+function Photos({ taskId }: { taskId: string }) {
+  const photos = useQuery<TaskPhoto>(taskPhotosQuery(taskId), [taskId]);
+  const [big, setBig] = useState<TaskPhoto | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="photo-row">
+      {(photos ?? []).map((p) => (
+        <span key={p.id} className="photo-thumb" onClick={() => setBig(p)}>
+          <img src={p.data} alt="" />
+        </span>
+      ))}
+      <label className="photo-add">
+        {busy ? "…" : "＋📷"}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={async (e) => {
+            const files = Array.from(e.target.files ?? []).slice(0, 4);
+            e.target.value = "";
+            setBusy(true);
+            try {
+              for (const f of files) await addTaskPhoto(taskId, await shrinkImage(f));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      </label>
+      {big && (
+        <div className="photo-big" onClick={() => setBig(null)}>
+          <img src={big.data} alt="" />
+          <button
+            className="btn ghost small"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm("この写真を消しますか？")) {
+                deleteTaskPhoto(big);
+                setBig(null);
+              }
+            }}
+          >
+            この写真を消す
+          </button>
+        </div>
+      )}
     </div>
   );
 }

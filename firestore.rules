@@ -20,6 +20,7 @@ service cloud.firestore {
     match /referrals/{id} { allow read, write: if allowed(); }
     match /memos/{id} { allow read, write: if allowed(); }
     match /tasks/{id} { allow read, write: if allowed(); }
+    match /taskPhotos/{id} { allow read, write: if allowed() && (request.resource == null || request.resource.data.data.size() < 900000); }
     match /settings/app { allow read, write: if allowed(); }
 
     // サーバ（Cloud Functions）だけが書く
