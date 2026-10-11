@@ -9,7 +9,7 @@ import { randomBytes } from "node:crypto";
 
 import { ALLOWED, AppSettings, DEFAULT_SETTINGS, FORMAT_LABEL, MEET_FORMATS, MeetFormat, REGION, appUrl } from "./config";
 import { DAY, HOUR, MIN, endOfJstDay, fmtRange, fmtSlot, isWeekend, jstParts, startOfJstDay, startOfJstMonth, startOfNextJstMonth, ymd } from "./time";
-import { Interval, Slot, currentSmokeKey, fillTemplate, pickSlots, rankMembers, slotsText, sortCards, periodLabel } from "./logic";
+import { Interval, Slot, currentSmokeKey, familyName, fillTemplate, pickSlots, rankMembers, slotsText, sortCards, periodLabel } from "./logic";
 import { SCOPES, busyIntervals, createEvent, deleteEvent, isConnected, oauthClient } from "./calendar";
 import { push, pushUid } from "./push";
 import { summarizeTask as aiSummarize } from "./ai";
@@ -118,7 +118,7 @@ async function createProposal(now: Date, kind: ProposalKind, memberId?: string):
       : kind === "differentDay"
         ? s.differentDayTemplate
         : s.templates[Math.floor(Math.random() * s.templates.length)] ?? DEFAULT_SETTINGS.templates[0];
-  const lineText = fillTemplate(tpl, { name: member.name, url: bookingUrl(token), slots: slotsText(slots) });
+  const lineText = fillTemplate(tpl, { name: familyName(member.name), url: bookingUrl(token), slots: slotsText(slots) });
 
   const o = await db.collection("oneToOnes").add({
     memberId: member.id,
@@ -180,9 +180,29 @@ async function ensureProposal(now: Date, force: boolean): Promise<{ cardId?: str
 // ---------- 青山さん・店長の画面から呼ぶ ----------
 
 /** 新しい1to1提案を出す（ホームの「1to1の候補を出す」） */
+/**
+ * 「1to1の候補を出す」。相手を選ばなければおまかせ。
+ * memberId＝メンバー一覧から選んだ人、outside＝メンバー以外の人（メンバー一覧に「メンバー外」として残す）
+ */
 export const requestProposal = onCall(async (req) => {
   requireAllowed(req);
-  return ensureProposal(new Date(), true);
+  const now = new Date();
+  const memberId = typeof req.data?.memberId === "string" ? req.data.memberId : "";
+  const outside = req.data?.outside as { name?: string; company?: string } | undefined;
+  if (!memberId && !outside?.name) return ensureProposal(now, true);
+  let id = memberId;
+  if (!id) {
+    const name = String(outside!.name).trim().slice(0, 40);
+    const same = await db.collection("members").where("name", "==", name).limit(1).get();
+    if (!same.empty) id = same.docs[0].id;
+    else {
+      const ref = await db.collection("members").add({ name, company: String(outside!.company ?? "").trim().slice(0, 60), outside: true, lastOneToOne: null, doNotInvite: false });
+      id = ref.id;
+    }
+  }
+  const mine = await db.collection("oneToOnes").where("memberId", "==", id).get();
+  if (mine.docs.some((o) => ["proposed", "waiting", "confirmed"].includes(o.get("status")))) return { reason: "already-active" };
+  return createProposal(now, "proposal", id);
 });
 
 /** 右スワイプ：LINEで送った → 返事待ちにする */
@@ -479,8 +499,8 @@ export const onPraiseCreated = onDocumentCreated("praises/{id}", async (ev) => {
 function followText(name: string, memo?: DocumentData) {
   const tags: string[] = memo?.tags ?? [];
   const connect: string[] = memo?.connect ?? [];
-  const lines = [`${name}さん、こんにちは！青山です😊`, "1to1からもう1か月たちましたね。その後お変わりないですか？"];
-  if (connect.length) lines.push(`前にお話しした${connect.map((n) => `${n}さん`).join("・")}の件、よかったらおつなぎしますね！`);
+  const lines = [`${familyName(name)}さん、こんにちは！青山です😊`, "1to1からもう1か月たちましたね。その後お変わりないですか？"];
+  if (connect.length) lines.push(`前にお話しした${connect.map((n) => `${familyName(n)}さん`).join("・")}の件、よかったらおつなぎしますね！`);
   else if (tags.includes("こちらから紹介できそう")) lines.push("何かお役に立てそうなことがあれば、いつでも声かけてください！");
   if (tags.includes("また話したい")) lines.push("またゆっくりお話ししたいです！");
   lines.push("お店にもぜひ遊びに来てください✨");
@@ -536,7 +556,7 @@ export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/T
       await o.ref.update({ eveCard: true });
     }
     if (now.getTime() >= end.getTime() + 15 * MIN) {
-      const lineText = fillTemplate(s.thanksTemplate, { name: o.get("memberName") });
+      const lineText = fillTemplate(s.thanksTemplate, { name: familyName(o.get("memberName")) });
       await o.ref.update({ status: "done" });
       await db.doc(`members/${o.get("memberId")}`).set({ lastOneToOne: ymd(start) }, { merge: true });
       await db.collection("cards").add({

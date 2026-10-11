@@ -32,7 +32,8 @@ export type ReplyKind = (typeof REPLY_KINDS)[number]["key"];
 
 export function replyDraft(kind: ReplyKind, name: string): string {
   const k = REPLY_KINDS.find((r) => r.key === kind);
-  return (k?.text ?? "").replace(/\{name\}/g, name.replace(/さん$/, "") || "〇〇");
+  const family = name.replace(/さん$/, "").trim().split(/[ \u3000]+/)[0];
+  return (k?.text ?? "").replace(/\{name\}/g, family || "〇〇");
 }
 
 /** 文面つきでLINEを開く（相手はLINE側で選ぶ）。文面なしならトーク一覧を開く */

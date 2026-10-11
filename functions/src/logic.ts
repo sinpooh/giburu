@@ -65,6 +65,11 @@ export function slotsText(slots: Slot[]): string {
   return slots.map((x) => fmtSlot(new Date(x.start))).join(" ／ ");
 }
 
+/** LINEの文面用：「山田 太郎」→「山田」。スペースがなければそのまま */
+export function familyName(name: string): string {
+  return (name ?? "").trim().split(/[ \u3000]+/)[0] ?? "";
+}
+
 export function fillTemplate(t: string, vars: Record<string, string>): string {
   return t.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 }
@@ -76,6 +81,7 @@ export interface MemberLike {
   lastOneToOne?: string | null;
   doNotInvite?: boolean;
   skippedOn?: string | null;
+  outside?: boolean;
 }
 
 /** 次に誘う人の順番（一度もしていない人 → 久しぶりの人。新メンバーは少し優先） */
@@ -86,7 +92,7 @@ export function rankMembers(members: MemberLike[], busyIds: Set<string>, now: Da
     return days + (isNew ? 60 : 0);
   };
   return members
-    .filter((m) => !m.doNotInvite && !busyIds.has(m.id) && m.skippedOn !== todayYmd)
+    .filter((m) => !m.doNotInvite && !m.outside && !busyIds.has(m.id) && m.skippedOn !== todayYmd)
     .sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name, "ja"));
 }
 

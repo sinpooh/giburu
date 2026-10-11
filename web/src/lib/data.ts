@@ -30,6 +30,7 @@ export interface Member {
   lastOneToOne?: string | null;
   memo?: string;
   doNotInvite?: boolean;
+  outside?: boolean; // メンバー以外の人（1to1の相手として入れた）
 }
 
 export const openCardsQuery = () => query(collection(db, "cards"), where("status", "==", "open"));
@@ -50,7 +51,7 @@ export function monthStats(rows: OneToOne[] | null, now: number) {
 }
 
 export const api = {
-  requestProposal: call<void, { cardId?: string; reason?: string }>("requestProposal"),
+  requestProposal: call<{ memberId?: string; outside?: { name: string; company?: string } } | void, { cardId?: string; reason?: string }>("requestProposal"),
   markSent: call<{ cardId: string }, { ok: boolean }>("markSent"),
   skipProposal: call<{ cardId: string }, { cardId?: string; reason?: string }>("skipProposal"),
   calendarAuthUrl: call<void, { url: string }>("calendarAuthUrl"),
@@ -121,6 +122,8 @@ export const REASONS: Record<string, string> = {
   "no-candidates": "今日誘える人はもういません。また明日！",
   "no-slots": "2週間先まで空きが見つかりませんでした",
   "already-open": "もう候補が出ています",
+  "already-active": "この人とはもう1to1の調整中か、予定が決まっています（1to1タブの予定を見てね）",
+  "no-member": "その人がメンバー一覧に見つかりませんでした",
 };
 
 /** リファーラル（チャプターのミッション：1週間に1件） */

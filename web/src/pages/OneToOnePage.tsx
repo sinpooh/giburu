@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Me, useNow, useQuery, useSettings } from "../lib/hooks";
 import { OneToOne, REASONS, activeOneToOnesQuery, api, monthStats } from "../lib/data";
 import { Meter } from "../components/Meter";
+import { Partner, PartnerPicker } from "../components/PartnerPicker";
 import { Schedule } from "./Schedule";
 import { Members } from "./Members";
 
@@ -14,11 +15,13 @@ export function OneToOnePage({ me, initialCsv = "", goHome }: { me: Me; initialC
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   // 1to1の流れの入り口：候補カードを作ってホームへ（ホームでスワイプしてLINEで送る）
-  const newProposal = async () => {
+  const [picking, setPicking] = useState(false);
+  const newProposal = async (p: Partner) => {
+    setPicking(false);
     setBusy(true);
     setMsg("");
     try {
-      const r = await api.requestProposal();
+      const r = await api.requestProposal(p ?? undefined);
       if (r.reason) setMsg(REASONS[r.reason] ?? r.reason);
       else goHome?.();
     } catch (e) {
@@ -31,11 +34,12 @@ export function OneToOnePage({ me, initialCsv = "", goHome }: { me: Me; initialC
     <div>
       <div className="page seg-head">
         <Meter count={monthStats(ones, now).count} goal={settings.monthlyGoal} />
-        <button className="btn primary todo-add-big" disabled={busy} onClick={newProposal}>
+        <button className="btn primary todo-add-big" disabled={busy} onClick={() => setPicking(true)}>
           {busy ? "相手と日にちを探しています…" : "🤝 1to1の候補を出す"}
         </button>
-        <p className="small muted center">押すと、相手と空いている日にちを選んでホームにカードを出します。カードを右にスワイプするとLINEで送れます</p>
+        <p className="small muted center">相手を選ぶ（おまかせもOK）と、空いている日にちを探してホームにカードを出します。カードを右にスワイプするとLINEで送れます</p>
         {msg && <p className="notice center">{msg}</p>}
+        {picking && <PartnerPicker onPick={newProposal} onCancel={() => setPicking(false)} />}
         <div className="seg">
           <button className={seg === "schedule" ? "on" : ""} onClick={() => setSeg("schedule")}>
             📅 予定

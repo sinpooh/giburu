@@ -59,6 +59,7 @@ export function Members({ initialCsv = "" }: { initialCsv?: string }) {
           <div className="muted small">
             {[m.company, m.industry].filter(Boolean).join("・")}
             {m.doNotInvite ? "（今は誘わない）" : ""}
+            {m.outside ? "（メンバー外）" : ""}
           </div>
         </button>
       ))}
