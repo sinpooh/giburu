@@ -1260,3 +1260,8 @@ textarea {
   color: #c77700;
   font-weight: 700;
 }
+.member-foot .small-btn {
+  padding: 8px 14px;
+  font-size: 15px;
+  width: auto;
+}

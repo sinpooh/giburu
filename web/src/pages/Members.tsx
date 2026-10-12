@@ -84,7 +84,9 @@ export function Members({ initialCsv = "", byName = "", onCardAdded, onStart, bu
           </button>
           {onStart && (
             <div className="row between member-foot">
-              <span className="small accent">🤝 押すと1to1の候補を出します</span>
+              <button className="btn primary small-btn" disabled={busy} onClick={() => onStart(m.id)}>
+                🤝 この人と1to1
+              </button>
               <button className="link-btn small" onClick={() => setEdit(m)}>
                 ✏️ 情報を見る・直す
               </button>
