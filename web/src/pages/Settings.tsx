@@ -17,6 +17,7 @@ const CAL_MSG: Record<string, string> = {
 
 export function Settings({ me, calendarResult }: { me: Me; calendarResult?: string }) {
   const s = useSettings();
+  const canConnect = me.role !== "viewer" || me.user.email === "sinpooh@urukau-ichioshi.com";
   const cal = useDoc<{ connected?: boolean; email?: string }>(doc(db, "settings", "calendar"));
   const myUser = useDoc<{ notifyManager?: boolean; fcmTokens?: string[] }>(doc(db, "users", me.user.uid));
   const [msg, setMsg] = useState(calendarResult ? CAL_MSG[calendarResult] ?? "" : "");
@@ -61,13 +62,14 @@ export function Settings({ me, calendarResult }: { me: Me; calendarResult?: stri
         ) : (
           <p className="muted">まだつながっていません。青山さんのGoogleアカウントで許可してください。</p>
         )}
-        {/* 別のアカウントでつなぎ直すと青山さんの予定が見えなくなるので、渡辺さんにはボタンを出さない */}
-        {me.role !== "viewer" && (
+        {/* 別のアカウントでつなぎ直すと青山さんの予定が見えなくなるので、渡辺さんにはボタンを出さない（シンプーさんは出す 2026-10-12） */}
+        {canConnect && (
           <button className="btn primary" disabled={busy} onClick={connectCalendar}>
             {cal?.connected ? "つなぎ直す" : "カレンダーをつなぐ"}
           </button>
         )}
-        {me.role !== "viewer" && !cal?.connected && <p className="muted small">「このアプリは Google で確認されていません」と出たら「詳細」→「ギブる（安全ではないページ）に移動」で進んでOKです（ギブるは青山さん専用なので審査を受けていないだけです）。</p>}
+        {canConnect && <p className="muted small">お店のカレンダーなど、つないだアカウントのカレンダーアプリに入っているカレンダーはすべて見ます。</p>}
+        {canConnect && !cal?.connected && <p className="muted small">「このアプリは Google で確認されていません」と出たら「詳細」→「ギブる（安全ではないページ）に移動」で進んでOKです（ギブるは青山さん専用なので審査を受けていないだけです）。</p>}
       </section>
 
       <section className="box">

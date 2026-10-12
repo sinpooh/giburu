@@ -76,7 +76,8 @@ async function calendarsToRead(c: OAuth2Client): Promise<{ ids: { id: string; co
   try {
     const data = await call<{ items?: { id: string; summary?: string; summaryOverride?: string; selected?: boolean; hidden?: boolean; primary?: boolean; backgroundColor?: string }[] }>(c, `${API}/users/me/calendarList?minAccessRole=freeBusyReader`);
     const ids = (data.items ?? [])
-      .filter((x) => x.primary || (x.selected && !x.hidden))
+      // 表示のチェックが外れていても読む（スマホのアプリとWebでチェックがずれていることがあるため）。隠したものだけ除く
+      .filter((x) => x.primary || !x.hidden)
       .filter((x) => !/#holiday@|#contacts@|#weeknum@/.test(x.id))
       .map((x) => ({ id: x.primary ? "primary" : x.id, color: x.backgroundColor, name: x.summaryOverride || x.summary || x.id }));
     return { ids: ids.length ? ids : [{ id: "primary", name: "メイン" }], all: true };
@@ -108,6 +109,7 @@ export async function calendarEvents(from: Date, to: Date): Promise<CalEvent[] |
       if (cal.id === "primary") throw e; // 別のカレンダーが読めないだけなら、ほかは続ける
     }
   }
+  logger.warn(`calendars read: ${lastCalendars.length}/${ids.length} all=${all}`);
   return out.sort((a, b) => a.start - b.start);
 }
 
