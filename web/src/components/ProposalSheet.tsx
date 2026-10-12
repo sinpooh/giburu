@@ -34,8 +34,9 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
 
   const send = () => {
     if (!card) return;
-    if (card.lineUrl) window.open(card.lineUrl, "_blank");
+    // 先に「送った」を記録してからLINEを開く（LINEに切りかわると通信が切れることがあるため）
     api.markSent({ cardId: card.id }).catch((e) => setMsg(String(e.message ?? e)));
+    if (card.lineUrl) window.open(card.lineUrl, "_blank");
     praise("送った！あとは返事を待つだけ！");
     onClose();
   };

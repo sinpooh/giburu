@@ -80,8 +80,8 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
       case "proposal":
       case "noReply":
       case "differentDay":
-        openLine(c.lineUrl);
         api.markSent({ cardId: c.id }).catch((e) => setMsg(String(e.message ?? e)));
+        openLine(c.lineUrl);
         praise();
         break;
       case "thanks":

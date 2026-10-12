@@ -17,7 +17,7 @@ const dayKey = (t: number) => {
 /** 1to1の候補を出すときに、どの予定をよけているかの一覧 */
 export function AvoidedEvents({ onClose }: { onClose: () => void }) {
   const s = useSettings();
-  const [data, setData] = useState<{ connected: boolean; allCalendars?: boolean; events: Ev[] } | null>(null);
+  const [data, setData] = useState<{ connected: boolean; allCalendars?: boolean; calendars?: string[]; events: Ev[] } | null>(null);
   const [err, setErr] = useState("");
   useEffect(() => {
     api.avoidedEvents().then(setData, (e) => setErr(String(e.message ?? e)));
@@ -41,6 +41,7 @@ export function AvoidedEvents({ onClose }: { onClose: () => void }) {
         </div>
         {err && <p className="notice">読みこめませんでした：{err}</p>}
         {!data && !err && <p className="muted center">カレンダーを見ています…</p>}
+        {data?.connected && !!data.calendars?.length && <p className="small">見ているカレンダー：{data.calendars.join("、")}</p>}
         {data?.connected && data.allCalendars === false && <p className="notice small">今は青山さん本人のカレンダーだけ見ています。お店のカレンダーなども見るには、青山さんのアカウントで「設定 → カレンダーをつなぎ直す」をしてください</p>}
         {data && !data.connected && <p className="notice">カレンダーがつながっていないので、予定はよけていません。設定からつないでください。</p>}
         {data?.connected && data.events.length === 0 && <p className="muted center">この2週間、カレンダーに予定はありません</p>}

@@ -1,3 +1,4 @@
+import { logger } from "firebase-functions/v2";
 // Googleカレンダー連携（合鍵＝リフレッシュトークンはサーバ側 private/calendar にだけ保存）
 import { OAuth2Client } from "google-auth-library";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -71,33 +72,39 @@ const API = "https://www.googleapis.com/calendar/v3";
  * 読むカレンダーの一覧。カレンダーアプリで表示しているもの（お店の共有カレンダーなど）すべて。
  * 祝日・誕生日のカレンダーは除く。まだつなぎ直していない（権限がない）ときは自分のカレンダーだけ
  */
-async function calendarsToRead(c: OAuth2Client): Promise<{ ids: { id: string; color?: string }[]; all: boolean }> {
+async function calendarsToRead(c: OAuth2Client): Promise<{ ids: { id: string; color?: string; name: string }[]; all: boolean }> {
   try {
-    const data = await call<{ items?: { id: string; selected?: boolean; hidden?: boolean; primary?: boolean; backgroundColor?: string }[] }>(c, `${API}/users/me/calendarList?minAccessRole=freeBusyReader`);
+    const data = await call<{ items?: { id: string; summary?: string; summaryOverride?: string; selected?: boolean; hidden?: boolean; primary?: boolean; backgroundColor?: string }[] }>(c, `${API}/users/me/calendarList?minAccessRole=freeBusyReader`);
     const ids = (data.items ?? [])
       .filter((x) => x.primary || (x.selected && !x.hidden))
       .filter((x) => !/#holiday@|#contacts@|#weeknum@/.test(x.id))
-      .map((x) => ({ id: x.primary ? "primary" : x.id, color: x.backgroundColor }));
-    return { ids: ids.length ? ids : [{ id: "primary" }], all: true };
+      .map((x) => ({ id: x.primary ? "primary" : x.id, color: x.backgroundColor, name: x.summaryOverride || x.summary || x.id }));
+    return { ids: ids.length ? ids : [{ id: "primary", name: "メイン" }], all: true };
   } catch (e) {
     if (String((e as Error)?.message ?? e).includes("invalid_grant")) throw e;
-    return { ids: [{ id: "primary" }], all: false };
+    logger.warn("calendarList failed (つなぎ直し前?)", String((e as Error)?.message ?? e).slice(0, 200));
+    return { ids: [{ id: "primary", name: "メイン" }], all: false };
   }
 }
 
 /** 最後に読んだとき、別のカレンダーまで読めたか（つなぎ直しが必要かの判定用） */
 export let lastReadAll = false;
+/** 最後に読んだカレンダーの名前（画面に「見ているカレンダー」として出す） */
+export let lastCalendars: string[] = [];
 
 export async function calendarEvents(from: Date, to: Date): Promise<CalEvent[] | null> {
   const c = await authedClient();
   if (!c) return null;
   const { ids, all } = await calendarsToRead(c);
   lastReadAll = all;
+  lastCalendars = [];
   const out: CalEvent[] = [];
   for (const cal of ids) {
     try {
       await readCalendar(c, cal.id, cal.color, from, to, out);
+      lastCalendars.push(cal.name);
     } catch (e) {
+      logger.warn("calendar read failed", cal.id === "primary" ? "primary" : "other", String((e as Error)?.message ?? e).slice(0, 200));
       if (cal.id === "primary") throw e; // 別のカレンダーが読めないだけなら、ほかは続ける
     }
   }
