@@ -1240,3 +1240,23 @@ textarea {
   font-weight: 800;
   font-size: 15px;
 }
+
+.member-main {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+.member-foot {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+}
+.member-foot .accent {
+  color: #c77700;
+  font-weight: 700;
+}

@@ -30,7 +30,7 @@ export function csvFromHash(): string {
   }
 }
 
-export function Members({ initialCsv = "", byName = "", onCardAdded }: { initialCsv?: string; byName?: string; onCardAdded?: (name: string) => void }) {
+export function Members({ initialCsv = "", byName = "", onCardAdded, onStart, busy = false }: { initialCsv?: string; byName?: string; onCardAdded?: (name: string) => void; onStart?: (memberId: string) => void; busy?: boolean }) {
   const rows = useQuery<Member>(collection(db, "members"));
   const [edit, setEdit] = useState<Partial<Member> | null>(null);
   const [importing, setImporting] = useState(!!initialCsv);
@@ -67,7 +67,9 @@ export function Members({ initialCsv = "", byName = "", onCardAdded }: { initial
       {rows === null && <p className="muted center">読み込み中…</p>}
       {rows && list.length === 0 && <p className="muted center">まだいません。まずは何人か追加してみてね</p>}
       {list.map((m) => (
-        <button key={m.id} className={`list-item member ${m.doNotInvite ? "dim" : ""}`} onClick={() => setEdit(m)}>
+        <div key={m.id} className={`list-item member ${m.doNotInvite ? "dim" : ""}`}>
+          {/* 押すとその人と1to1の候補を出す（onStart がないときは情報を開く） */}
+          <button className="member-main" disabled={busy} onClick={() => (onStart ? onStart(m.id) : setEdit(m))}>
           <div className="row between">
             <b>{m.name}</b>
             <span className="muted small">{m.lastOneToOne ? `前回 ${m.lastOneToOne}` : "まだ1to1なし"}</span>
@@ -79,7 +81,16 @@ export function Members({ initialCsv = "", byName = "", onCardAdded }: { initial
             {m.hasCard ? " 📇" : ""}
             {m.metAt ? `・${m.metAt}で` : ""}
           </div>
-        </button>
+          </button>
+          {onStart && (
+            <div className="row between member-foot">
+              <span className="small accent">🤝 押すと1to1の候補を出します</span>
+              <button className="link-btn small" onClick={() => setEdit(m)}>
+                ✏️ 情報を見る・直す
+              </button>
+            </div>
+          )}
+        </div>
       ))}
       {edit && <MemberForm m={edit} onClose={() => setEdit(null)} />}
       {/* 今いるメンバーを読み終えてから開く（同じ人を二重に追加しないため） */}
