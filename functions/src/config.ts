@@ -45,7 +45,7 @@ export interface AppSettings {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   workStart: "10:00",
-  workEnd: "18:00",
+  workEnd: "19:00", // 2026-10-12 シンプーさん：19時まで
   durationMin: 60,
   bufferMin: 30,
   rangeStartDays: 3,

@@ -103,12 +103,16 @@ async function createProposal(now: Date, kind: ProposalKind, memberId?: string):
     member = ranked[0] as DocumentData & { id: string };
   }
 
+  // いつもの範囲で3日そろわなければ、30日先まで広げて探す（2026-10-12 シンプーさん。お店の予定で埋まる週があるため）
+  const maxDays = Math.max(s.rangeEndDays, 30);
   const from = new Date(startOfJstDay(now).getTime() + s.rangeStartDays * DAY);
-  const to = new Date(startOfJstDay(now).getTime() + (s.rangeEndDays + 1) * DAY);
+  const to = new Date(startOfJstDay(now).getTime() + (maxDays + 1) * DAY);
   const { busy, calendar } = await allBusy(from, to);
   // 確保する長さ（1.5時間）と、訪問を選ばれたときの移動時間まで入るように空きを探す
   const fit = { ...s, durationMin: Math.max(s.durationMin, s.holdMin), bufferMin: Math.max(s.bufferMin, s.visitTravelMin) };
-  const slots = pickSlots(now, busy, fit).map((x) => ({ start: x.start, end: new Date(Date.parse(x.start) + s.durationMin * MIN).toISOString() }));
+  let picked = pickSlots(now, busy, fit);
+  if (picked.length < 3) picked = pickSlots(now, busy, { ...fit, rangeEndDays: maxDays });
+  const slots = picked.map((x) => ({ start: x.start, end: new Date(Date.parse(x.start) + s.durationMin * MIN).toISOString() }));
   if (slots.length === 0) return { reason: "no-slots" };
 
   const token = randomBytes(18).toString("base64url");
@@ -754,10 +758,10 @@ export const avoidedEvents = onCall(async (req) => {
   const s = await getSettings();
   const now = new Date();
   const from = startOfJstDay(now);
-  const to = new Date(startOfJstDay(now).getTime() + (s.rangeEndDays + 1) * DAY);
+  const to = new Date(startOfJstDay(now).getTime() + (Math.max(s.rangeEndDays, 30) + 1) * DAY);
   const evs = await calendarEvents(from, to);
   if (!evs) return { connected: false, events: [] };
-  return { connected: true, allCalendars: lastReadAll, calendars: lastCalendars, rangeStartDays: s.rangeStartDays, rangeEndDays: s.rangeEndDays, events: evs.slice(0, 300) };
+  return { connected: true, allCalendars: lastReadAll, calendars: lastCalendars, rangeStartDays: s.rangeStartDays, rangeEndDays: s.rangeEndDays, events: evs.slice(0, 600) };
 });
 
 // 「📇 名刺を撮る」：写真から名前・会社などを読み取る（保存は画面側で）

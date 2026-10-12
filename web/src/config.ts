@@ -38,7 +38,7 @@ export interface AppSettings {
 // 画面で使う既定値（サーバ側の既定値は functions/src/config.ts）
 export const DEFAULTS: Pick<AppSettings, "workStart" | "workEnd" | "durationMin" | "bufferMin" | "format" | "meetingUrl" | "monthlyGoal" | "smokeTimes" | "weekendNotify" | "includeWeekends" | "closedDays" | "shopAddress" | "holdMin" | "visitTravelMin"> = {
   workStart: "10:00",
-  workEnd: "18:00",
+  workEnd: "19:00", // 2026-10-12 シンプーさん：19時まで
   durationMin: 60,
   bufferMin: 30,
   format: "online",
