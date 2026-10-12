@@ -1299,3 +1299,83 @@ textarea {
   text-align: left;
   cursor: pointer;
 }
+
+/* 候補日の1日表示 */
+.daytl {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px 8px 10px;
+}
+.daytl-allday {
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin: 0 0 4px 48px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.daytl-grid {
+  position: relative;
+  margin-top: 6px;
+}
+.daytl-hour {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid #eee;
+}
+.daytl-hour span {
+  position: absolute;
+  top: -8px;
+  left: 0;
+  width: 42px;
+  font-size: 11px;
+  color: #888;
+  background: #fff;
+}
+.daytl-ev {
+  position: absolute;
+  border-radius: 6px;
+  padding: 2px 6px;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.3;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.daytl-ev b {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.daytl-ev.free {
+  opacity: 0.45;
+}
+.daytl-slot {
+  position: absolute;
+  left: 48px;
+  right: 0;
+  border: 3px dashed #1a9b4b;
+  background: rgba(26, 155, 75, 0.12);
+  border-radius: 8px;
+  z-index: 2;
+}
+.daytl-slot span {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #12733a;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 6px;
+  padding: 0 4px;
+}
+.daytl-day {
+  margin: 12px 0 4px;
+}

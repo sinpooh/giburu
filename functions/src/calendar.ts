@@ -46,6 +46,7 @@ const BASE = "https://www.googleapis.com/calendar/v3/calendars/primary";
 
 interface GEvent {
   status?: string;
+  colorId?: string;
   summary?: string;
   transparency?: string;
   start?: { date?: string; dateTime?: string };
@@ -54,6 +55,8 @@ interface GEvent {
 
 export interface CalEvent {
   title: string;
+  /** Googleカレンダーの予定の色（1〜11）。無ければカレンダーの色 */
+  color?: string;
   start: number;
   end: number;
   allDay: boolean;
@@ -81,9 +84,9 @@ export async function calendarEvents(from: Date, to: Date): Promise<CalEvent[] |
       const title = ev.summary || "（タイトルなし）";
       if (ev.start?.date && ev.end?.date) {
         // 終日予定：日本時間のその日まるごと
-        out.push({ title, start: Date.parse(`${ev.start.date}T00:00:00+09:00`), end: Date.parse(`${ev.end.date}T00:00:00+09:00`), allDay: true, avoided: true });
+        out.push({ title, color: ev.colorId, start: Date.parse(`${ev.start.date}T00:00:00+09:00`), end: Date.parse(`${ev.end.date}T00:00:00+09:00`), allDay: true, avoided: true });
       } else if (ev.start?.dateTime && ev.end?.dateTime) {
-        out.push({ title, start: Date.parse(ev.start.dateTime), end: Date.parse(ev.end.dateTime), allDay: false, avoided: ev.transparency !== "transparent" });
+        out.push({ title, color: ev.colorId, start: Date.parse(ev.start.dateTime), end: Date.parse(ev.end.dateTime), allDay: false, avoided: ev.transparency !== "transparent" });
       }
     }
     pageToken = data.nextPageToken;

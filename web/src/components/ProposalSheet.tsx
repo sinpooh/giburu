@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "../lib/cards";
-import { REASONS, api } from "../lib/data";
+import { CalEv, REASONS, api } from "../lib/data";
+import { DayTimeline } from "./DayTimeline";
 import { usePraise } from "./Praise";
 
 /** 1to1タブの中で、候補日とLINE文面を見て送る画面 */
@@ -9,6 +10,14 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [showText, setShowText] = useState(false);
+  // 候補日ごとの実際の予定（Googleカレンダー）
+  const [events, setEvents] = useState<CalEv[] | null | "off">(null);
+  useEffect(() => {
+    api.avoidedEvents().then(
+      (r) => setEvents(r.connected ? r.events : "off"),
+      () => setEvents("off"),
+    );
+  }, []);
 
   const run = async (f: () => Promise<void>) => {
     setBusy(true);
@@ -83,6 +92,22 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
         <button className="btn ghost" onClick={onClose}>
           あとで
         </button>
+        {card && (
+          <div>
+            <h3>候補日のカレンダー</h3>
+            {events === null && <p className="small muted">カレンダーを読み込み中…</p>}
+            {events === "off" && <p className="small muted">カレンダーが読めませんでした（設定でカレンダーをつなぐと出ます）</p>}
+            {Array.isArray(events) &&
+              (card.slots ?? []).map((s) => (
+                <div key={s.start}>
+                  <p className="daytl-day">
+                    <b>📅 {s.label}</b>
+                  </p>
+                  <DayTimeline events={events} slot={s} />
+                </div>
+              ))}
+          </div>
+        )}
       </div>
     </div>
   );
