@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { getRedirectResult } from "firebase/auth";
 import { auth } from "./firebase";
 import { Me, useMe, useQuery } from "./lib/hooks";
-import { OneToOne, Task, activeOneToOnesQuery, openTasksQuery } from "./lib/data";
+import { OneToOne, Task, activeOneToOnesQuery, openCardsQuery, openTasksQuery } from "./lib/data";
+import { Card } from "./lib/cards";
 import { refreshPushToken } from "./lib/push";
 import { PraiseProvider } from "./components/Praise";
 import { Character } from "./components/Character";
@@ -75,9 +76,12 @@ function Shell({ me }: { me: Me }) {
   // これからの1to1・ミッション・依頼の件数：タブの赤丸と、ホーム画面のアイコンの赤い数字
   const tasks = useQuery<Task>(me.role === "manager" ? null : openTasksQuery());
   const ones = useQuery<OneToOne>(me.role === "manager" ? null : activeOneToOnesQuery());
+  const openCards = useQuery<Card>(me.role === "manager" ? null : openCardsQuery());
   const nowIso = new Date().toISOString();
   const counts: Partial<Record<Tab, number>> = {
-    oneToOne: (ones ?? []).filter((o) => o.status === "confirmed" && o.confirmedSlot && o.confirmedSlot.end >= nowIso).length,
+    oneToOne:
+      (ones ?? []).filter((o) => o.status === "confirmed" && o.confirmedSlot && o.confirmedSlot.end >= nowIso).length +
+      (openCards ?? []).filter((c) => c.type === "proposal").length,
     mission: (tasks ?? []).filter((t) => t.kind === "mission").length,
     order: (tasks ?? []).filter((t) => t.kind === "order").length,
   };
@@ -111,7 +115,7 @@ function Shell({ me }: { me: Me }) {
       )}
       <main>
         {tab === "home" && <Home me={me} goSchedule={() => setTab("oneToOne")} goSettings={() => setTab("settings")} goTab={setTab} />}
-        {tab === "oneToOne" && <OneToOnePage me={me} initialCsv={importCsv} goHome={() => setTab("home")} />}
+        {tab === "oneToOne" && <OneToOnePage me={me} initialCsv={importCsv} />}
         {tab === "mission" && <Todos me={me} kind="mission" />}
         {tab === "order" && <Todos me={me} kind="order" />}
         {tab === "members" && <Members key={importCsv.length} initialCsv={importCsv} />}

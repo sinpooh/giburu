@@ -163,7 +163,9 @@ async function createProposal(now: Date, kind: ProposalKind, memberId?: string):
 async function ensureProposal(now: Date, force: boolean): Promise<{ cardId?: string; reason?: string }> {
   const s = await getSettings();
   const open = await db.collection("cards").where("status", "==", "open").get();
-  if (open.docs.some((d) => d.get("type") === "proposal")) return { reason: "already-open" };
+  const existing = open.docs.find((d) => d.get("type") === "proposal");
+  // 自分で「おまかせ」を押したときは、出ている候補をそのまま開く
+  if (existing) return force ? { cardId: existing.id } : { reason: "already-open" };
   if (!force) {
     if (!s.includeWeekends && isWeekend(now)) return { reason: "weekend" };
     const state = await db.doc("state/tick").get();

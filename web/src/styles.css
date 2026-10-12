@@ -1265,3 +1265,37 @@ textarea {
   font-size: 15px;
   width: auto;
 }
+
+.slot-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.slot-list li {
+  padding: 6px 0;
+  font-weight: 700;
+}
+.line-preview {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 14px;
+  background: #f6f6f6;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 0;
+}
+.pending-list .list-item {
+  border-color: #fdb030;
+}
+.accent-text {
+  color: #c77700;
+  font-weight: 700;
+}
+.proposal-bar {
+  width: 100%;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}

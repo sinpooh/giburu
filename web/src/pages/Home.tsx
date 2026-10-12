@@ -33,7 +33,7 @@ function greeting(now: number, smokeTimes: string[]): string {
   return "今日もお疲れさまでした！あと1枚だけ見てって〜";
 }
 
-export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { me: Me; readOnly?: boolean; goSchedule?: () => void; goSettings?: () => void; goTab?: (t: "mission" | "order") => void }) {
+export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { me: Me; readOnly?: boolean; goSchedule?: () => void; goSettings?: () => void; goTab?: (t: "mission" | "order" | "oneToOne") => void }) {
   const now = useNow(30000);
   const settings = useSettings();
   const cards = useQuery<Card>(openCardsQuery());
@@ -50,9 +50,10 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState("");
   const [adding, setAdding] = useState(false);
-  const [loadingNew, setLoadingNew] = useState(false);
 
-  const sorted = useMemo(() => sortCards(cards ?? [], now), [cards, now]);
+  // 1to1のおすすめ（送る前）は1to1タブで扱う。ホームは「今やること」だけ
+  const sorted = useMemo(() => sortCards((cards ?? []).filter((c) => c.type !== "proposal"), now), [cards, now]);
+  const proposalCount = (cards ?? []).filter((c) => c.type === "proposal").length;
   const top = sorted[0];
   const stats = monthStats(ones, now);
   // 渡辺さん（viewer）も青山さんと同じ操作ができる。褒めの表示だけは青山さん本人に出す
@@ -119,21 +120,6 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
     }
   };
 
-  // 1to1のおすすめを「消すだけ」（左スワイプの「別の人」と違い、次のおすすめは作らない）
-  const proposals = sorted.filter((c) => c.type === "proposal");
-  const [clearing, setClearing] = useState(false);
-  const dismiss = async (list: Card[]) => {
-    setClearing(true);
-    setMsg("");
-    try {
-      for (const c of list) await api.skipProposal({ cardId: c.id, next: false });
-    } catch (e) {
-      setMsg(String((e as Error).message ?? e));
-    } finally {
-      setClearing(false);
-    }
-  };
-
   const onLeft = async (c: Card) => {
     switch (c.type) {
       case "proposal":
@@ -155,19 +141,6 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
         break;
       default:
         snoozeCard(c.id, snoozeTarget());
-    }
-  };
-
-  const newProposal = async () => {
-    setLoadingNew(true);
-    setMsg("");
-    try {
-      const r = await api.requestProposal();
-      if (r.reason) setMsg(REASONS[r.reason] ?? r.reason);
-    } catch (e) {
-      setMsg(String((e as Error).message ?? e));
-    } finally {
-      setLoadingNew(false);
     }
   };
 
@@ -197,6 +170,14 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
         </div>
       )}
 
+      {!readOnly && proposalCount > 0 && (
+        <button className="bni-todo proposal-bar" onClick={() => goTab?.("oneToOne")}>
+          <span className="small">
+            🤝 <b>1to1のおすすめが{proposalCount}件</b>あります
+          </span>
+          <span className="small accent-text">1to1タブで見る ›</span>
+        </button>
+      )}
       <Meter count={stats.count} goal={settings.monthlyGoal} />
       <RefMeter refs={refs} now={now} onAdd={isAoyama ? () => setAddingRef(true) : undefined} />
       {bniTodo && (
@@ -243,29 +224,14 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
             <b>今日はもう全部終わり！</b>
           </p>
           {!readOnly && (
-            <button className="btn primary" onClick={newProposal} disabled={loadingNew}>
-              {loadingNew ? "探しています…" : "1to1の候補を出す"}
+            <button className="btn primary" onClick={() => goTab?.("oneToOne")}>
+              1to1の候補を出す
             </button>
           )}
         </div>
       )}
 
       {sorted.length > 1 && <p className="center muted small">あと{sorted.length - 1}枚</p>}
-      {!readOnly && top?.type === "proposal" && (
-        <p className="center">
-          <button className="link-btn small" disabled={clearing} onClick={() => dismiss([top])}>
-            🗑 このおすすめを消す
-          </button>
-          {proposals.length > 1 && (
-            <>
-              {"　"}
-              <button className="link-btn small" disabled={clearing} onClick={() => confirm(`1to1のおすすめ${proposals.length}枚をまとめて消しますか？`) && dismiss(proposals)}>
-                🗑 おすすめ{proposals.length}枚をまとめて消す
-              </button>
-            </>
-          )}
-        </p>
-      )}
       {msg && <p className="center notice">{msg}</p>}
 
       {isAoyama && (
