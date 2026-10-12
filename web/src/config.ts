@@ -20,6 +20,7 @@ export interface AppSettings {
   closedDays: number[];
   format: "online" | "inperson";
   shopAddress: string;
+  phone?: string; // 相手に伝える青山さんの電話番号
   bniUrl?: string; // リファーラルを記録したあとに開くBNIアプリ／サイト
   holdMin: number;
   visitTravelMin: number;

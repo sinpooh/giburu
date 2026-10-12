@@ -386,10 +386,16 @@ export const confirmBooking = onCall(async (req) => {
 
   const member = await db.doc(`members/${o.get("memberId")}`).get();
   const location = format === "online" ? s.meetingUrl || "Zoom" : visit ? address : s.shopAddress || "お店";
+  const shared = !!member.get("email"); // 相手にも招待が届く（説明文も相手に見える）
   const desc = [
+    // 相手にも役立つ情報を先頭に
+    format === "store" && s.shopAddress && `📍 地図：${mapsUrl(s.shopAddress)}`,
+    visit && `📍 地図：${mapsUrl(address)}`,
+    format === "online" && s.meetingUrl && `💻 Zoom：${s.meetingUrl}`,
+    s.phone && `📞 当日の連絡先（青山）：${s.phone}`,
     `やり方：${FORMAT_LABEL[format]}`,
     member.get("industry") && `業種：${member.get("industry")}`,
-    member.get("memo") && `メモ：${member.get("memo")}`,
+    !shared && member.get("memo") && `メモ：${member.get("memo")}`,
     member.get("lastOneToOne") && `前回の1to1：${member.get("lastOneToOne")}`,
     "（ギブるで調整）",
   ]
@@ -511,6 +517,29 @@ function followText(name: string, memo?: DocumentData) {
   return lines.join("\n");
 }
 
+/** Googleマップで場所を開くリンク */
+function mapsUrl(addr: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
+}
+
+/** 前日に相手へ送る「明日楽しみにしてます」LINE */
+function eveText(o: FirebaseFirestore.DocumentSnapshot, s: AppSettings, start: Date) {
+  const p = jstParts(start);
+  const format = (o.get("format") as MeetFormat) ?? "store";
+  const lines = [`${familyName(o.get("memberName"))}さん、こんばんは！青山です😊`, `明日${p.hh}:${String(p.mm).padStart(2, "0")}からの1to1、楽しみにしています！`];
+  if (format === "store") {
+    lines.push(`【場所】${s.shopAddress || "お店"}`);
+    if (s.shopAddress) lines.push(mapsUrl(s.shopAddress));
+  } else if (format === "online") {
+    lines.push("【Zoom】" + (s.meetingUrl || "URLはあとでお送りします"));
+  } else if (o.get("place")) {
+    lines.push(`【うかがう場所】${o.get("place")}`);
+  }
+  if (s.phone) lines.push(`当日なにかあれば、こちらにご連絡ください📞 ${s.phone}`);
+  lines.push("どうぞよろしくお願いします！");
+  return lines.join("\n");
+}
+
 const OVERDUE_NOTIFY_TYPES = ["request", "lineReply", "thanks", "differentDay"];
 
 export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/Tokyo" }, async () => {
@@ -551,6 +580,9 @@ export const tick = onSchedule({ schedule: "every 15 minutes", timeZone: "Asia/T
         type: "tomorrow",
         status: "open",
         title: `明日 ${o.get("memberName")}さんと1to1`,
+        hint: "相手に「明日楽しみにしてます」のLINEを用意しました",
+        lineText: eveText(o, s, start),
+        lineUrl: lineShareUrl(eveText(o, s, start)),
         sub: fmtRange(start, end) + `・${FORMAT_LABEL[(o.get("format") as MeetFormat) ?? "store"] ?? "来店"}` + (o.get("place") ? `\n${o.get("place")}` : ""),
         oneToOneId: o.id,
         dueAt: Timestamp.fromDate(endOfJstDay(start)),

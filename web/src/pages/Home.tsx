@@ -91,6 +91,12 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
         // LINEから戻ってきたら「ひとことメモ」
         if (c.oneToOneId && c.memberId) setMemoFor({ oneToOneId: c.oneToOneId, memberId: c.memberId, memberName: c.title.replace(/さんにお礼送る？$/, "") });
         break;
+      case "tomorrow":
+        // 相手に「明日楽しみにしてます」
+        openLine(c.lineUrl);
+        finishCard(c.id);
+        praise("前日のひとこと、気が利きすぎ！");
+        break;
       case "greet":
         openLine(c.lineUrl);
         finishCard(c.id);

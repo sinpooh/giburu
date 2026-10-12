@@ -52,7 +52,7 @@ export const CARD_META: Record<CardType, { label: string; right: string; left: s
   noReply: { label: "返事がまだ", right: "もう一回送る", left: "別の人にする" },
   differentDay: { label: "別の日がいい", right: "新しい3枠で送る", left: "あとで" },
   confirmed: { label: "決まった！", right: "見た", left: "見た" },
-  tomorrow: { label: "明日の1to1", right: "OK", left: "予定を見る" },
+  tomorrow: { label: "明日の1to1", right: "LINEで送る", left: "予定を見る" },
   thanks: { label: "お礼", right: "LINEでお礼", left: "あとで" },
   request: { label: "シンプーさんからのお願い", right: "完了", left: "あとで" },
   lineReply: { label: "LINE返信", right: "LINEで返信", left: "あとで" },

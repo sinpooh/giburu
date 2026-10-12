@@ -29,6 +29,7 @@ export interface AppSettings {
   closedDays: number[]; // 1to1の候補にしない曜日（0=日〜6=土）
   format: "online" | "inperson"; // 旧設定（今は使わない。相手が予約ページで MeetFormat から選ぶ）
   shopAddress: string; // 来店のときの場所
+  phone: string; // 相手に伝える青山さんの電話番号（当日の連絡先）
   holdMin: number; // 青山さんのカレンダーで確保する長さ（相手には durationMin で見せる。話が伸びたとき用）
   visitTravelMin: number; // 訪問のときの移動時間（前後それぞれ）
   meetingUrl: string;
@@ -53,6 +54,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   closedDays: [4], // 木曜定休（2026-10-10 シンプーさん）
   format: "online",
   shopAddress: "",
+  phone: "",
   holdMin: 90, // 2026-10-10 シンプーさん：相手には1時間、カレンダーは1.5時間
   visitTravelMin: 45,
   meetingUrl: "",

@@ -143,6 +143,7 @@ export function Settings({ me, calendarResult }: { me: Me; calendarResult?: stri
         </div>
         <div className="small muted">相手は「来店（おすすめ）・Zoom・訪問」から選べます</div>
         <Field label="来店のときのお店の住所" type="text" value={s.shopAddress ?? ""} onSave={(v) => save({ shopAddress: v })} />
+        <Field label="相手に伝える青山さんの電話番号（当日の連絡先）" type="tel" value={s.phone ?? ""} onSave={(v) => save({ phone: v.trim() })} />
         <Field label="ZoomのURL（いつも同じもの）" type="url" value={s.meetingUrl} onSave={(v) => save({ meetingUrl: v })} />
         <div className="grid2">
           <Field label="カレンダーで確保する長さ（分）" type="number" value={String(s.holdMin ?? 90)} onSave={(v) => save({ holdMin: Number(v) || 90 })} />
