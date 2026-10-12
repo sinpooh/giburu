@@ -10,7 +10,7 @@ import { randomBytes } from "node:crypto";
 import { ALLOWED, AppSettings, DEFAULT_SETTINGS, FORMAT_LABEL, MEET_FORMATS, MeetFormat, REGION, appUrl } from "./config";
 import { DAY, HOUR, MIN, endOfJstDay, fmtRange, fmtSlot, isWeekend, jstParts, startOfJstDay, startOfJstMonth, startOfNextJstMonth, ymd } from "./time";
 import { Interval, Slot, currentSmokeKey, familyName, fillTemplate, pickSlots, rankMembers, slotsText, sortCards, periodLabel } from "./logic";
-import { SCOPES, busyIntervals, calendarEvents, createEvent, deleteEvent, isConnected, oauthClient } from "./calendar";
+import { SCOPES, busyIntervals, calendarEvents, lastReadAll, createEvent, deleteEvent, isConnected, oauthClient } from "./calendar";
 import { push, pushUid } from "./push";
 import { readBusinessCard, summarizeTask as aiSummarize } from "./ai";
 
@@ -757,7 +757,7 @@ export const avoidedEvents = onCall(async (req) => {
   const to = new Date(startOfJstDay(now).getTime() + (s.rangeEndDays + 1) * DAY);
   const evs = await calendarEvents(from, to);
   if (!evs) return { connected: false, events: [] };
-  return { connected: true, rangeStartDays: s.rangeStartDays, rangeEndDays: s.rangeEndDays, events: evs.slice(0, 200) };
+  return { connected: true, allCalendars: lastReadAll, rangeStartDays: s.rangeStartDays, rangeEndDays: s.rangeEndDays, events: evs.slice(0, 300) };
 });
 
 // 「📇 名刺を撮る」：写真から名前・会社などを読み取る（保存は画面側で）

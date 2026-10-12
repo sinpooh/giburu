@@ -4,7 +4,8 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { appUrl } from "./config";
 import { Interval } from "./logic";
 
-export const SCOPES = ["openid", "email", "https://www.googleapis.com/auth/calendar.events"];
+// calendarlist.readonly：お店の予定など、青山さんのアカウントに入っている別のカレンダーも読むため（2026-10-12 追加。つなぎ直しが必要）
+export const SCOPES = ["openid", "email", "https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.calendarlist.readonly"];
 
 export function oauthClient(): OAuth2Client {
   // 貼り付けたときに紛れ込んだ空白・改行は取り除く（シークレットを入れ直したら関数の公開し直しが必要）
@@ -64,10 +65,46 @@ export interface CalEvent {
 }
 
 /** 青山さんのカレンダー（いつもの自分のカレンダー）の予定。つながっていなければ null */
+const API = "https://www.googleapis.com/calendar/v3";
+
+/**
+ * 読むカレンダーの一覧。カレンダーアプリで表示しているもの（お店の共有カレンダーなど）すべて。
+ * 祝日・誕生日のカレンダーは除く。まだつなぎ直していない（権限がない）ときは自分のカレンダーだけ
+ */
+async function calendarsToRead(c: OAuth2Client): Promise<{ ids: { id: string; color?: string }[]; all: boolean }> {
+  try {
+    const data = await call<{ items?: { id: string; selected?: boolean; hidden?: boolean; primary?: boolean; backgroundColor?: string }[] }>(c, `${API}/users/me/calendarList?minAccessRole=freeBusyReader`);
+    const ids = (data.items ?? [])
+      .filter((x) => x.primary || (x.selected && !x.hidden))
+      .filter((x) => !/#holiday@|#contacts@|#weeknum@/.test(x.id))
+      .map((x) => ({ id: x.primary ? "primary" : x.id, color: x.backgroundColor }));
+    return { ids: ids.length ? ids : [{ id: "primary" }], all: true };
+  } catch (e) {
+    if (String((e as Error)?.message ?? e).includes("invalid_grant")) throw e;
+    return { ids: [{ id: "primary" }], all: false };
+  }
+}
+
+/** 最後に読んだとき、別のカレンダーまで読めたか（つなぎ直しが必要かの判定用） */
+export let lastReadAll = false;
+
 export async function calendarEvents(from: Date, to: Date): Promise<CalEvent[] | null> {
   const c = await authedClient();
   if (!c) return null;
+  const { ids, all } = await calendarsToRead(c);
+  lastReadAll = all;
   const out: CalEvent[] = [];
+  for (const cal of ids) {
+    try {
+      await readCalendar(c, cal.id, cal.color, from, to, out);
+    } catch (e) {
+      if (cal.id === "primary") throw e; // 別のカレンダーが読めないだけなら、ほかは続ける
+    }
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
+
+async function readCalendar(c: OAuth2Client, calId: string, calColor: string | undefined, from: Date, to: Date, out: CalEvent[]) {
   let pageToken: string | undefined;
   do {
     const q = new URLSearchParams({
@@ -78,20 +115,19 @@ export async function calendarEvents(from: Date, to: Date): Promise<CalEvent[] |
       maxResults: "250",
     });
     if (pageToken) q.set("pageToken", pageToken);
-    const data = await call<{ items?: GEvent[]; nextPageToken?: string }>(c, `${BASE}/events?${q}`);
+    const data = await call<{ items?: GEvent[]; nextPageToken?: string }>(c, `${API}/calendars/${encodeURIComponent(calId)}/events?${q}`);
     for (const ev of data.items ?? []) {
       if (ev.status === "cancelled") continue;
       const title = ev.summary || "（タイトルなし）";
       if (ev.start?.date && ev.end?.date) {
         // 終日予定：日本時間のその日まるごと
-        out.push({ title, color: ev.colorId, start: Date.parse(`${ev.start.date}T00:00:00+09:00`), end: Date.parse(`${ev.end.date}T00:00:00+09:00`), allDay: true, avoided: true });
+        out.push({ title, color: ev.colorId ?? calColor, start: Date.parse(`${ev.start.date}T00:00:00+09:00`), end: Date.parse(`${ev.end.date}T00:00:00+09:00`), allDay: true, avoided: true });
       } else if (ev.start?.dateTime && ev.end?.dateTime) {
-        out.push({ title, color: ev.colorId, start: Date.parse(ev.start.dateTime), end: Date.parse(ev.end.dateTime), allDay: false, avoided: ev.transparency !== "transparent" });
+        out.push({ title, color: ev.colorId ?? calColor, start: Date.parse(ev.start.dateTime), end: Date.parse(ev.end.dateTime), allDay: false, avoided: ev.transparency !== "transparent" });
       }
     }
     pageToken = data.nextPageToken;
   } while (pageToken);
-  return out;
 }
 
 /** 予定ありの時間帯。終日予定は「空き」扱いの設定でもその日全体を埋める */

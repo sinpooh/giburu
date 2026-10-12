@@ -15,7 +15,8 @@ const COLORS: Record<string, string> = {
   "10": "#0b8043",
   "11": "#d50000",
 };
-const colorOf = (e: CalEv) => COLORS[e.color ?? ""] ?? "#039be5";
+// 予定の色番号、またはカレンダーの色（#から始まる）
+const colorOf = (e: CalEv) => (e.color?.startsWith("#") ? e.color : COLORS[e.color ?? ""]) ?? "#039be5";
 const HOUR_PX = 44;
 const hm = (t: number) => {
   const p = jst(t);

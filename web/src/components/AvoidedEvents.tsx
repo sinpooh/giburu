@@ -17,7 +17,7 @@ const dayKey = (t: number) => {
 /** 1to1の候補を出すときに、どの予定をよけているかの一覧 */
 export function AvoidedEvents({ onClose }: { onClose: () => void }) {
   const s = useSettings();
-  const [data, setData] = useState<{ connected: boolean; events: Ev[] } | null>(null);
+  const [data, setData] = useState<{ connected: boolean; allCalendars?: boolean; events: Ev[] } | null>(null);
   const [err, setErr] = useState("");
   useEffect(() => {
     api.avoidedEvents().then(setData, (e) => setErr(String(e.message ?? e)));
@@ -31,7 +31,7 @@ export function AvoidedEvents({ onClose }: { onClose: () => void }) {
         <h2>よけている予定</h2>
         <div className="box small">
           <div>1to1の候補は、次の時間をよけて出しています。</div>
-          <div>・青山さんのGoogleカレンダーの予定（下の一覧）</div>
+          <div>・青山さんのGoogleカレンダーの予定（お店などの共有カレンダーも含む・下の一覧）</div>
           <div>・予定の前後{s.bufferMin}分</div>
           <div>
             ・{s.workStart}〜{s.workEnd}以外の時間{closed ? `、お休みの曜日（${closed}）` : ""}
@@ -41,6 +41,7 @@ export function AvoidedEvents({ onClose }: { onClose: () => void }) {
         </div>
         {err && <p className="notice">読みこめませんでした：{err}</p>}
         {!data && !err && <p className="muted center">カレンダーを見ています…</p>}
+        {data?.connected && data.allCalendars === false && <p className="notice small">今は青山さん本人のカレンダーだけ見ています。お店のカレンダーなども見るには、青山さんのアカウントで「設定 → カレンダーをつなぎ直す」をしてください</p>}
         {data && !data.connected && <p className="notice">カレンダーがつながっていないので、予定はよけていません。設定からつないでください。</p>}
         {data?.connected && data.events.length === 0 && <p className="muted center">この2週間、カレンダーに予定はありません</p>}
         {[...days.entries()].map(([day, evs]) => (

@@ -12,9 +12,10 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
   const [showText, setShowText] = useState(false);
   // 候補日ごとの実際の予定（Googleカレンダー）
   const [events, setEvents] = useState<CalEv[] | null | "off">(null);
+  const [onlyMine, setOnlyMine] = useState(false);
   useEffect(() => {
     api.avoidedEvents().then(
-      (r) => setEvents(r.connected ? r.events : "off"),
+      (r) => (setEvents(r.connected ? r.events : "off"), setOnlyMine(r.connected && r.allCalendars === false)),
       () => setEvents("off"),
     );
   }, []);
@@ -96,6 +97,7 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
           <div>
             <h3>候補日のカレンダー</h3>
             {events === null && <p className="small muted">カレンダーを読み込み中…</p>}
+            {onlyMine && <p className="notice small">お店のカレンダーなど、ほかのカレンダーの予定はまだ入っていません。青山さんのアカウントで「設定 → カレンダーをつなぎ直す」をすると入ります</p>}
             {events === "off" && <p className="small muted">カレンダーが読めませんでした（設定でカレンダーをつなぐと出ます）</p>}
             {Array.isArray(events) &&
               (card.slots ?? []).map((s) => (
