@@ -59,8 +59,8 @@ export function AvoidedEvents({ onClose }: { onClose: () => void }) {
         ))}
         {data?.connected && (
           <p className="small muted">
-            ⚠️は、Googleカレンダーで「予定なし（空き）」になっている予定です。よけたいときは、その予定を開いて「予定あり」に変えてください。
-            ここに出ていない予定（お店の共有カレンダーなど、別のカレンダーの予定）はよけていません。
+            「予定なし（空き）」にしている予定も含めて、ここに出ている予定はすべてよけています。
+            ここに出ていない予定（つないだアカウントに共有されていないカレンダーの予定）はよけていません。
           </p>
         )}
         <button className="btn ghost" onClick={onClose}>

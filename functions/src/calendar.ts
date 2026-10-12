@@ -132,7 +132,7 @@ async function readCalendar(c: OAuth2Client, calId: string, calColor: string | u
         // 終日予定：日本時間のその日まるごと
         out.push({ title, color: ev.colorId ?? calColor, start: Date.parse(`${ev.start.date}T00:00:00+09:00`), end: Date.parse(`${ev.end.date}T00:00:00+09:00`), allDay: true, avoided: true });
       } else if (ev.start?.dateTime && ev.end?.dateTime) {
-        out.push({ title, color: ev.colorId ?? calColor, start: Date.parse(ev.start.dateTime), end: Date.parse(ev.end.dateTime), allDay: false, avoided: ev.transparency !== "transparent" });
+        out.push({ title, color: ev.colorId ?? calColor, start: Date.parse(ev.start.dateTime), end: Date.parse(ev.end.dateTime), allDay: false, avoided: true }); // 「空き」にしている予定もよける（2026-10-12 市場の予定が空き扱いでかぶったため）
       }
     }
     pageToken = data.nextPageToken;
