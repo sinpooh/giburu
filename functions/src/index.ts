@@ -211,6 +211,37 @@ export const requestProposal = onCall(async (req) => {
   return createProposal(now, "proposal", id);
 });
 
+/**
+ * 候補日を直す（送る前だけ）。1つずつ消す・自分で日時を足す。
+ * starts＝候補の開始時刻（ISO）。LINEの文面の日にち部分も入れかえる
+ */
+export const editSlots = onCall(async (req) => {
+  requireAllowed(req);
+  const card = await db.doc(`cards/${String(req.data?.cardId ?? "")}`).get();
+  if (!card.exists || card.get("status") !== "open") throw new HttpsError("not-found", "カードがありません");
+  const oRef = db.doc(`oneToOnes/${card.get("oneToOneId")}`);
+  const o = await oRef.get();
+  if (o.get("status") !== "proposed") throw new HttpsError("failed-precondition", "送ったあとは直せません");
+  const s = await getSettings();
+  const now = Date.now();
+  const starts: string[] = Array.isArray(req.data?.starts) ? req.data.starts : [];
+  const uniq = [...new Set(starts.map((x) => Date.parse(String(x))).filter((t) => Number.isFinite(t) && t > now))].sort((a, b) => a - b).slice(0, 5);
+  if (uniq.length === 0) throw new HttpsError("invalid-argument", "候補を1つ以上入れてください");
+  const slots = uniq.map((t) => ({ start: new Date(t).toISOString(), end: new Date(t + s.durationMin * MIN).toISOString() }));
+  const oldText: string = card.get("lineText") ?? "";
+  const oldSlots: Slot[] = o.get("slots") ?? [];
+  const lineText = oldText.includes(slotsText(oldSlots)) ? oldText.replace(slotsText(oldSlots), slotsText(slots)) : oldText;
+  const batch = db.batch();
+  batch.update(oRef, { slots });
+  batch.update(card.ref, {
+    slots: slots.map((x) => ({ ...x, label: fmtSlot(new Date(x.start)), period: periodLabel(new Date(x.start)) })),
+    lineText,
+    lineUrl: lineShareUrl(lineText),
+  });
+  await batch.commit();
+  return { ok: true };
+});
+
 /** 右スワイプ：LINEで送った → 返事待ちにする */
 export const markSent = onCall(async (req) => {
   requireAllowed(req);

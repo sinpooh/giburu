@@ -1379,3 +1379,11 @@ textarea {
 .daytl-day {
   margin: 12px 0 4px;
 }
+.slot-add input {
+  flex: 1;
+  min-width: 0;
+}
+.slot-add .btn {
+  width: auto;
+  padding: 10px 16px;
+}

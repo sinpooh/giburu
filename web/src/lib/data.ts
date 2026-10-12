@@ -110,6 +110,7 @@ export type CalEv = { title: string; color?: string; start: number; end: number;
 export const api = {
   requestProposal: call<{ memberId?: string; outside?: { name: string; company?: string } } | void, { cardId?: string; reason?: string }>("requestProposal"),
   markSent: call<{ cardId: string }, { ok: boolean }>("markSent"),
+  editSlots: call<{ cardId: string; starts: string[] }, { ok: boolean }>("editSlots"),
   skipProposal: call<{ cardId: string; next?: boolean }, { cardId?: string; reason?: string }>("skipProposal"),
   calendarAuthUrl: call<void, { url: string }>("calendarAuthUrl"),
   sendTestPush: call<void, { sent: number }>("sendTestPush"),

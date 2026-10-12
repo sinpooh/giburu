@@ -32,6 +32,14 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
     }
   };
 
+  // 候補日を直す（1つ消す・自分で足す）
+  const [adding, setAdding] = useState(false);
+  const [newAt, setNewAt] = useState("");
+  const saveSlots = (starts: string[]) =>
+    run(async () => {
+      await api.editSlots({ cardId: card!.id, starts });
+    });
+
   const send = () => {
     if (!card) return;
     // 先に「送った」を記録してからLINEを開く（LINEに切りかわると通信が切れることがあるため）
@@ -69,9 +77,34 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
               <b>この日にちで聞きます</b>
               <ul className="slot-list">
                 {(card.slots ?? []).map((s) => (
-                  <li key={s.start}>📅 {s.label}</li>
+                  <li key={s.start} className="row between">
+                    <span>📅 {s.label}</span>
+                    {(card.slots ?? []).length > 1 && (
+                      <button className="link-btn small" disabled={busy} onClick={() => saveSlots((card.slots ?? []).filter((x) => x.start !== s.start).map((x) => x.start))}>
+                        ✕ 消す
+                      </button>
+                    )}
+                  </li>
                 ))}
               </ul>
+              {adding ? (
+                <div className="row gap slot-add">
+                  <input type="datetime-local" step={1800} value={newAt} onChange={(e) => setNewAt(e.target.value)} />
+                  <button
+                    className="btn primary"
+                    disabled={busy || !newAt}
+                    onClick={() => (saveSlots([...(card.slots ?? []).map((x) => x.start), new Date(newAt).toISOString()]), setAdding(false), setNewAt(""))}
+                  >
+                    足す
+                  </button>
+                </div>
+              ) : (
+                (card.slots ?? []).length < 5 && (
+                  <button className="link-btn small" onClick={() => setAdding(true)}>
+                    ＋ 日時を自分で入れる
+                  </button>
+                )
+              )}
             </div>
             <button className="link-btn small" onClick={() => setShowText(!showText)}>
               {showText ? "▲ LINEの文面を閉じる" : "▼ LINEの文面を見る"}
@@ -86,7 +119,7 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
                 別の人にする
               </button>
               <button className="btn ghost grow" disabled={busy} onClick={remove}>
-                🗑 消す
+                🗑 この人をやめる
               </button>
             </div>
           </>
