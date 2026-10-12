@@ -241,6 +241,8 @@ export const skipProposal = onCall(async (req) => {
   const mId = card.get("memberId");
   if (mId) batch.update(db.doc(`members/${mId}`), { skippedOn: ymd(now) });
   await batch.commit();
+  // next:false は「消すだけ」（次のおすすめを作らない）
+  if (req.data?.next === false) return {};
   return createProposal(now, "proposal");
 });
 

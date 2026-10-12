@@ -119,6 +119,21 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
     }
   };
 
+  // 1to1のおすすめを「消すだけ」（左スワイプの「別の人」と違い、次のおすすめは作らない）
+  const proposals = sorted.filter((c) => c.type === "proposal");
+  const [clearing, setClearing] = useState(false);
+  const dismiss = async (list: Card[]) => {
+    setClearing(true);
+    setMsg("");
+    try {
+      for (const c of list) await api.skipProposal({ cardId: c.id, next: false });
+    } catch (e) {
+      setMsg(String((e as Error).message ?? e));
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const onLeft = async (c: Card) => {
     switch (c.type) {
       case "proposal":
@@ -236,6 +251,21 @@ export function Home({ me, readOnly = false, goSchedule, goSettings, goTab }: { 
       )}
 
       {sorted.length > 1 && <p className="center muted small">あと{sorted.length - 1}枚</p>}
+      {!readOnly && top?.type === "proposal" && (
+        <p className="center">
+          <button className="link-btn small" disabled={clearing} onClick={() => dismiss([top])}>
+            🗑 このおすすめを消す
+          </button>
+          {proposals.length > 1 && (
+            <>
+              {"　"}
+              <button className="link-btn small" disabled={clearing} onClick={() => confirm(`1to1のおすすめ${proposals.length}枚をまとめて消しますか？`) && dismiss(proposals)}>
+                🗑 おすすめ{proposals.length}枚をまとめて消す
+              </button>
+            </>
+          )}
+        </p>
+      )}
       {msg && <p className="center notice">{msg}</p>}
 
       {isAoyama && (

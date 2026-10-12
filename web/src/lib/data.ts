@@ -108,7 +108,7 @@ export function monthStats(rows: OneToOne[] | null, now: number) {
 export const api = {
   requestProposal: call<{ memberId?: string; outside?: { name: string; company?: string } } | void, { cardId?: string; reason?: string }>("requestProposal"),
   markSent: call<{ cardId: string }, { ok: boolean }>("markSent"),
-  skipProposal: call<{ cardId: string }, { cardId?: string; reason?: string }>("skipProposal"),
+  skipProposal: call<{ cardId: string; next?: boolean }, { cardId?: string; reason?: string }>("skipProposal"),
   calendarAuthUrl: call<void, { url: string }>("calendarAuthUrl"),
   sendTestPush: call<void, { sent: number }>("sendTestPush"),
   getBooking: call<{ token: string }, BookingInfo>("getBooking"),
