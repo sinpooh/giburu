@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { collection } from "firebase/firestore";
 import { db } from "../firebase";
 import { useQuery } from "../lib/hooks";
-import { Member } from "../lib/data";
+import { Member, isTeam } from "../lib/data";
 
 export type Partner = { memberId?: string; outside?: { name: string; company?: string } } | null; // null＝おまかせ
 
@@ -17,7 +17,7 @@ export function PartnerPicker({ onPick, onCancel }: { onPick: (p: Partner) => vo
     const k = q.trim();
     return (members ?? [])
       .filter((m) => !k || m.name.includes(k) || (m.company ?? "").includes(k) || (m.industry ?? "").includes(k))
-      .sort((a, b) => Number(!b.team) - Number(!a.team) || Number(!!a.outside) - Number(!!b.outside) || a.name.localeCompare(b.name, "ja"));
+      .sort((a, b) => Number(!isTeam(b)) - Number(!isTeam(a)) || Number(!!a.outside) - Number(!!b.outside) || a.name.localeCompare(b.name, "ja"));
   }, [members, q]);
   return (
     <div className="sheet-bg" onClick={onCancel}>
@@ -33,7 +33,7 @@ export function PartnerPicker({ onPick, onCancel }: { onPick: (p: Partner) => vo
               {list.map((m) => (
                 <button key={m.id} className="pick-item" onClick={() => onPick({ memberId: m.id })}>
                   <b>
-                    {m.team ? "⭐ " : ""}
+                    {isTeam(m) ? "⭐ " : ""}
                     {m.name}さん
                   </b>
                   {m.outside && <span className="tag">メンバー外</span>}

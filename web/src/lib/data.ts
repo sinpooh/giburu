@@ -31,7 +31,7 @@ export interface Member {
   memo?: string;
   doNotInvite?: boolean;
   outside?: boolean; // メンバー以外の人（1to1の相手として入れた・名刺から登録した）
-  team?: boolean; // 同じチームのメンバー（メンバー一覧で上に分けて出す）
+  team?: boolean; // 同じチームのメンバー。未設定なら「メンバー外でなければチーム」（isTeam）
   title?: string;
   phone?: string;
   address?: string;
@@ -280,3 +280,6 @@ export function finishTask(id: string) {
 export function deleteTask(id: string) {
   return deleteDoc(doc(db, "tasks", id));
 }
+
+/** 同じチームか。未設定のメンバー（取り込んだ53人など）はチーム、メンバー外は「その他」（2026-10-13 シンプーさん） */
+export const isTeam = (m: Pick<Member, "team" | "outside">) => m.team ?? !m.outside;

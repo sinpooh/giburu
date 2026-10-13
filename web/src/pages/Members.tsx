@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { addDoc, collection, deleteDoc, doc, setDoc, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { useQuery } from "../lib/hooks";
-import { Member } from "../lib/data";
+import { Member, isTeam } from "../lib/data";
 import { csvToMembers } from "../lib/csv";
 import { CardScan } from "../components/CardScan";
 import { useDoc } from "../lib/hooks";
@@ -38,15 +38,15 @@ export function Members({ initialCsv = "", byName = "", onCardAdded, onStart, bu
   const list = [...(rows ?? [])].sort((a, b) => a.name.localeCompare(b.name, "ja"));
   // 「同じチーム」と「その他」に分ける。検索中は全員から探す
   const [q, setQ] = useState("");
-  const teamCount = list.filter((m) => m.team).length;
+  const teamCount = list.filter(isTeam).length;
   const [seg, setSeg] = useState<"team" | "other" | null>(null);
   const curSeg = seg ?? (teamCount > 0 ? "team" : "other");
   const shown = useMemo(() => {
     const k = q.trim();
     if (k) return list.filter((m) => [m.name, m.company, m.industry, m.metAt].some((x) => (x ?? "").includes(k)));
-    return list.filter((m) => (curSeg === "team" ? m.team : !m.team)).sort((a, b) => Number(!!a.outside) - Number(!!b.outside));
+    return list.filter((m) => (curSeg === "team" ? isTeam(m) : !isTeam(m))).sort((a, b) => Number(!!a.outside) - Number(!!b.outside));
   }, [list, q, curSeg]);
-  const toggleTeam = (m: Member) => setDoc(doc(db, "members", m.id), { team: !m.team }, { merge: true });
+  const toggleTeam = (m: Member) => setDoc(doc(db, "members", m.id), { team: !isTeam(m) }, { merge: true });
 
   return (
     <div className="page">
@@ -98,7 +98,7 @@ export function Members({ initialCsv = "", byName = "", onCardAdded, onStart, bu
           <button className="member-main" disabled={busy} onClick={() => (onStart ? onStart(m.id) : setEdit(m))}>
           <div className="row between">
             <b>
-              {m.team ? "⭐ " : ""}
+              {isTeam(m) ? "⭐ " : ""}
               {m.name}
             </b>
             <span className="muted small">{m.lastOneToOne ? `前回 ${m.lastOneToOne}` : "まだ1to1なし"}</span>
@@ -121,7 +121,7 @@ export function Members({ initialCsv = "", byName = "", onCardAdded, onStart, bu
             )}
             <span className="row gap">
               <button className="link-btn small" onClick={() => toggleTeam(m)}>
-                {m.team ? "⭐ チーム" : "☆ チーム"}
+                {isTeam(m) ? "⭐ チーム" : "☆ チーム"}
               </button>
               <button className="link-btn small" onClick={() => setEdit(m)}>
                 ✏️ 情報
@@ -146,7 +146,7 @@ function MemberForm({ m, onClose }: { m: Partial<Member>; onClose: () => void })
     for (const [k] of FIELDS) data[k] = ((v[k] as string) ?? "").trim();
     data.lastOneToOne = data.lastOneToOne || null;
     data.doNotInvite = !!v.doNotInvite;
-    data.team = !!v.team;
+    data.team = isTeam(v);
     if (m.id) await setDoc(doc(db, "members", m.id), data, { merge: true });
     else await addDoc(collection(db, "members"), data);
     onClose();
@@ -168,7 +168,7 @@ function MemberForm({ m, onClose }: { m: Partial<Member>; onClose: () => void })
           </label>
         ))}
         <label className="check">
-          <input type="checkbox" checked={!!v.team} onChange={(e) => setV({ ...v, team: e.target.checked })} />
+          <input type="checkbox" checked={isTeam(v)} onChange={(e) => setV({ ...v, team: e.target.checked })} />
           ⭐ 同じチーム
         </label>
         <label className="check">
