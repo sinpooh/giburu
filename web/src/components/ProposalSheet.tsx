@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Card } from "../lib/cards";
 import { CalEv, REASONS, api } from "../lib/data";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../firebase";
+import { lineUrlFor } from "../lib/replies";
 import { DayTimeline } from "./DayTimeline";
 import { usePraise } from "./Praise";
 
@@ -10,6 +13,8 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [showText, setShowText] = useState(false);
+  // LINEを開く前の確認（文面を直せる）
+  const [draft, setDraft] = useState<string | null>(null);
   // 候補日ごとの実際の予定（Googleカレンダー）
   const [events, setEvents] = useState<CalEv[] | null | "off">(null);
   const [onlyMine, setOnlyMine] = useState(false);
@@ -41,10 +46,13 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
     });
 
   const send = () => {
-    if (!card) return;
+    if (!card || draft === null) return;
+    const text = draft.trim();
+    // 直した文面はカードにも残す
+    if (text !== (card.lineText ?? "").trim()) updateDoc(doc(db, "cards", card.id), { lineText: text, lineUrl: lineUrlFor(text) }).catch(() => undefined);
     // 先に「送った」を記録してからLINEを開く（LINEに切りかわると通信が切れることがあるため）
     api.markSent({ cardId: card.id }).catch((e) => setMsg(String(e.message ?? e)));
-    if (card.lineUrl) window.open(card.lineUrl, "_blank");
+    window.open(lineUrlFor(text), "_blank");
     praise("送った！あとは返事を待つだけ！");
     onClose();
   };
@@ -66,7 +74,22 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
   return (
     <div className="sheet-bg" onClick={onClose}>
       <div className="sheet tall" onClick={(e) => e.stopPropagation()}>
-        {!card ? (
+        {card && draft !== null ? (
+          <>
+            <h2>この内容で送ります</h2>
+            <p className="small muted">直したいところは、そのまま書きかえてOKです</p>
+            <textarea className="line-edit" rows={12} value={draft} onChange={(e) => setDraft(e.target.value)} />
+            <button className="btn primary" disabled={!draft.trim()} onClick={send}>
+              💬 この内容でLINEを開く
+            </button>
+            <button className="btn ghost" onClick={() => setDraft(card.lineText ?? "")}>
+              元の文面にもどす
+            </button>
+            <button className="btn ghost" onClick={() => setDraft(null)}>
+              もどる
+            </button>
+          </>
+        ) : !card ? (
           <p className="muted center">候補を用意しています…</p>
         ) : (
           <>
@@ -111,7 +134,7 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
             </button>
             {showText && <pre className="line-preview">{card.lineText}</pre>}
             {msg && <p className="notice center">{msg}</p>}
-            <button className="btn primary" disabled={busy} onClick={send}>
+            <button className="btn primary" disabled={busy} onClick={() => setDraft(card.lineText ?? "")}>
               💬 LINEで送る
             </button>
             <div className="row gap">
@@ -127,7 +150,7 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
         <button className="btn ghost" onClick={onClose}>
           あとで
         </button>
-        {card && (
+        {card && draft === null && (
           <div>
             <h3>候補日のカレンダー</h3>
             {events === null && <p className="small muted">カレンダーを読み込み中…</p>}
