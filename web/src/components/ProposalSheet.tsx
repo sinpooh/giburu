@@ -37,6 +37,14 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
     }
   };
 
+  // 候補の時間にかぶっている予定（自分で足した日時など）
+  const clashes = (start: number, end: number) =>
+    Array.isArray(events) ? events.filter((e) => e.start < end && e.end > start).map((e) => (e.allDay ? `${e.title}（終日）` : e.title)) : [];
+  const warn = (start: number, end: number) => {
+    const c = clashes(start, end);
+    return c.length ? <div className="clash-warn">⚠️ この時間は{c.slice(0, 3).join("・")}の予定があります</div> : null;
+  };
+
   // 候補日を直す（1つ消す・自分で足す）
   const [adding, setAdding] = useState(false);
   const [newAt, setNewAt] = useState("");
@@ -106,17 +114,21 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
               <b>この日にちで聞きます</b>
               <ul className="slot-list">
                 {(card.slots ?? []).map((s) => (
-                  <li key={s.start} className="row between">
+                  <li key={s.start}>
+                    <div className="row between">
                     <span>📅 {s.label}</span>
                     {(card.slots ?? []).length > 1 && (
                       <button className="link-btn small" disabled={busy} onClick={() => saveSlots((card.slots ?? []).filter((x) => x.start !== s.start).map((x) => x.start))}>
                         ✕ 消す
                       </button>
                     )}
+                    </div>
+                    {warn(Date.parse(s.start), Date.parse(s.end))}
                   </li>
                 ))}
               </ul>
               {adding ? (
+                <>
                 <div className="row gap slot-add">
                   <input type="datetime-local" step={1800} value={newAt} onChange={(e) => setNewAt(e.target.value)} />
                   <button
@@ -127,6 +139,8 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
                     足す
                   </button>
                 </div>
+                {newAt && warn(new Date(newAt).getTime(), new Date(newAt).getTime() + 60 * 60000)}
+                </>
               ) : (
                 (card.slots ?? []).length < 5 && (
                   <button className="link-btn small" onClick={() => setAdding(true)}>
