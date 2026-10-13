@@ -31,6 +31,7 @@ export interface Member {
   memo?: string;
   doNotInvite?: boolean;
   outside?: boolean; // メンバー以外の人（1to1の相手として入れた・名刺から登録した）
+  team?: boolean; // 同じチームのメンバー（メンバー一覧で上に分けて出す）
   title?: string;
   phone?: string;
   address?: string;

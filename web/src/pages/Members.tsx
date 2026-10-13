@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { addDoc, collection, deleteDoc, doc, setDoc, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { useQuery } from "../lib/hooks";
@@ -36,6 +36,17 @@ export function Members({ initialCsv = "", byName = "", onCardAdded, onStart, bu
   const [importing, setImporting] = useState(!!initialCsv);
   const [scanning, setScanning] = useState(false);
   const list = [...(rows ?? [])].sort((a, b) => a.name.localeCompare(b.name, "ja"));
+  // 「同じチーム」と「その他」に分ける。検索中は全員から探す
+  const [q, setQ] = useState("");
+  const teamCount = list.filter((m) => m.team).length;
+  const [seg, setSeg] = useState<"team" | "other" | null>(null);
+  const curSeg = seg ?? (teamCount > 0 ? "team" : "other");
+  const shown = useMemo(() => {
+    const k = q.trim();
+    if (k) return list.filter((m) => [m.name, m.company, m.industry, m.metAt].some((x) => (x ?? "").includes(k)));
+    return list.filter((m) => (curSeg === "team" ? m.team : !m.team)).sort((a, b) => Number(!!a.outside) - Number(!!b.outside));
+  }, [list, q, curSeg]);
+  const toggleTeam = (m: Member) => setDoc(doc(db, "members", m.id), { team: !m.team }, { merge: true });
 
   return (
     <div className="page">
@@ -64,14 +75,32 @@ export function Members({ initialCsv = "", byName = "", onCardAdded, onStart, bu
           CSVで取り込み
         </button>
       </div>
+      <input className="member-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 名前・会社・業種でさがす" />
+      {!q.trim() && (
+        <div className="seg">
+          <button className={curSeg === "team" ? "on" : ""} onClick={() => setSeg("team")}>
+            ⭐ 同じチーム（{teamCount}）
+          </button>
+          <button className={curSeg === "other" ? "on" : ""} onClick={() => setSeg("other")}>
+            その他（{list.length - teamCount}）
+          </button>
+        </div>
+      )}
       {rows === null && <p className="muted center">読み込み中…</p>}
       {rows && list.length === 0 && <p className="muted center">まだいません。まずは何人か追加してみてね</p>}
-      {list.map((m) => (
+      {rows && list.length > 0 && !q.trim() && curSeg === "team" && teamCount === 0 && (
+        <p className="muted center small">まだいません。「その他」で同じチームの人の「☆ チーム」を押すと、ここに入ります</p>
+      )}
+      {q.trim() && shown.length === 0 && <p className="muted center small">見つかりませんでした</p>}
+      {shown.map((m) => (
         <div key={m.id} className={`list-item member ${m.doNotInvite ? "dim" : ""}`}>
           {/* 押すとその人と1to1の候補を出す（onStart がないときは情報を開く） */}
           <button className="member-main" disabled={busy} onClick={() => (onStart ? onStart(m.id) : setEdit(m))}>
           <div className="row between">
-            <b>{m.name}</b>
+            <b>
+              {m.team ? "⭐ " : ""}
+              {m.name}
+            </b>
             <span className="muted small">{m.lastOneToOne ? `前回 ${m.lastOneToOne}` : "まだ1to1なし"}</span>
           </div>
           <div className="muted small">
@@ -82,16 +111,23 @@ export function Members({ initialCsv = "", byName = "", onCardAdded, onStart, bu
             {m.metAt ? `・${m.metAt}で` : ""}
           </div>
           </button>
-          {onStart && (
-            <div className="row between member-foot">
+          <div className="row between member-foot">
+            {onStart ? (
               <button className="btn primary small-btn" disabled={busy} onClick={() => onStart(m.id)}>
                 🤝 この人と1to1
               </button>
-              <button className="link-btn small" onClick={() => setEdit(m)}>
-                ✏️ 情報を見る・直す
+            ) : (
+              <span />
+            )}
+            <span className="row gap">
+              <button className="link-btn small" onClick={() => toggleTeam(m)}>
+                {m.team ? "⭐ チーム" : "☆ チーム"}
               </button>
-            </div>
-          )}
+              <button className="link-btn small" onClick={() => setEdit(m)}>
+                ✏️ 情報
+              </button>
+            </span>
+          </div>
         </div>
       ))}
       {edit && <MemberForm m={edit} onClose={() => setEdit(null)} />}
@@ -110,6 +146,7 @@ function MemberForm({ m, onClose }: { m: Partial<Member>; onClose: () => void })
     for (const [k] of FIELDS) data[k] = ((v[k] as string) ?? "").trim();
     data.lastOneToOne = data.lastOneToOne || null;
     data.doNotInvite = !!v.doNotInvite;
+    data.team = !!v.team;
     if (m.id) await setDoc(doc(db, "members", m.id), data, { merge: true });
     else await addDoc(collection(db, "members"), data);
     onClose();
@@ -130,6 +167,10 @@ function MemberForm({ m, onClose }: { m: Partial<Member>; onClose: () => void })
             <input type={type} value={(v[k] as string) ?? ""} onChange={(e) => setV({ ...v, [k]: e.target.value })} />
           </label>
         ))}
+        <label className="check">
+          <input type="checkbox" checked={!!v.team} onChange={(e) => setV({ ...v, team: e.target.checked })} />
+          ⭐ 同じチーム
+        </label>
         <label className="check">
           <input type="checkbox" checked={!!v.doNotInvite} onChange={(e) => setV({ ...v, doNotInvite: e.target.checked })} />
           今は誘わない

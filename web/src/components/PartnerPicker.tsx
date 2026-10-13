@@ -17,7 +17,7 @@ export function PartnerPicker({ onPick, onCancel }: { onPick: (p: Partner) => vo
     const k = q.trim();
     return (members ?? [])
       .filter((m) => !k || m.name.includes(k) || (m.company ?? "").includes(k) || (m.industry ?? "").includes(k))
-      .sort((a, b) => Number(!!a.outside) - Number(!!b.outside) || a.name.localeCompare(b.name, "ja"));
+      .sort((a, b) => Number(!b.team) - Number(!a.team) || Number(!!a.outside) - Number(!!b.outside) || a.name.localeCompare(b.name, "ja"));
   }, [members, q]);
   return (
     <div className="sheet-bg" onClick={onCancel}>
@@ -32,7 +32,10 @@ export function PartnerPicker({ onPick, onCancel }: { onPick: (p: Partner) => vo
             <div className="pick-list">
               {list.map((m) => (
                 <button key={m.id} className="pick-item" onClick={() => onPick({ memberId: m.id })}>
-                  <b>{m.name}さん</b>
+                  <b>
+                    {m.team ? "⭐ " : ""}
+                    {m.name}さん
+                  </b>
                   {m.outside && <span className="tag">メンバー外</span>}
                   <span className="muted small">{[m.company, m.industry].filter(Boolean).join("・")}</span>
                 </button>
