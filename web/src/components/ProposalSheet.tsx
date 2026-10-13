@@ -45,6 +45,12 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
       await api.editSlots({ cardId: card!.id, starts });
     });
 
+  // 直した文面をカードに残す（「もどる」「あとで」でも消えないように）
+  const saveDraft = () => {
+    if (!card || draft === null) return;
+    const text = draft.trim();
+    if (text && text !== (card.lineText ?? "").trim()) updateDoc(doc(db, "cards", card.id), { lineText: text, lineUrl: lineUrlFor(text) }).catch(() => undefined);
+  };
   const send = () => {
     if (!card || draft === null) return;
     const text = draft.trim();
@@ -85,7 +91,7 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
             <button className="btn ghost" onClick={() => setDraft(card.lineText ?? "")}>
               元の文面にもどす
             </button>
-            <button className="btn ghost" onClick={() => setDraft(null)}>
+            <button className="btn ghost" onClick={() => (saveDraft(), setDraft(null))}>
               もどる
             </button>
           </>
@@ -147,7 +153,7 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
             </div>
           </>
         )}
-        <button className="btn ghost" onClick={onClose}>
+        <button className="btn ghost" onClick={() => (saveDraft(), onClose())}>
           あとで
         </button>
         {card && draft === null && (
