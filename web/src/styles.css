@@ -1410,3 +1410,76 @@ textarea {
   padding: 4px 8px;
   margin: 2px 0 4px;
 }
+
+/* ---------- パソコン（横幅が広い画面）だけ：大きく・広く。スマホはこれまでどおり ---------- */
+@media (min-width: 900px) {
+  html,
+  body {
+    font-size: 18px;
+  }
+  .app {
+    padding-bottom: 0;
+    padding-left: 230px;
+  }
+  .page {
+    max-width: 900px;
+    padding: 28px 40px 48px;
+    gap: 16px;
+  }
+  h1 {
+    font-size: 1.7rem;
+  }
+  /* 下のタブを左の縦メニューに */
+  .tabbar {
+    top: 0;
+    bottom: 0;
+    right: auto;
+    width: 230px;
+    flex-direction: column;
+    gap: 4px;
+    padding: 24px 12px;
+    border-top: none;
+    border-right: 1px solid var(--line);
+  }
+  .tabbar::before {
+    content: "ギブる";
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: var(--pink);
+    padding: 0 14px 18px;
+  }
+  .tabbar button {
+    flex: none;
+    text-align: left;
+    padding: 14px 16px;
+    font-size: 1.05rem;
+    border-radius: 12px;
+  }
+  .tabbar button.on {
+    background: var(--pink-soft);
+  }
+  .tab-badge {
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+  }
+  .gear {
+    top: 20px;
+    right: 28px;
+    font-size: 1.7rem;
+  }
+  /* 下から出る画面は、まん中に大きく */
+  .sheet-bg {
+    align-items: center;
+  }
+  .sheet,
+  .sheet.tall {
+    max-width: 760px;
+    max-height: 90vh;
+    border-radius: 22px;
+    padding: 24px 28px;
+  }
+  .daytl-ev {
+    font-size: 14px;
+  }
+}
