@@ -39,7 +39,7 @@ export function ProposalSheet({ card, onClose, onSwitch }: { card: Card | undefi
 
   // 候補の時間にかぶっている予定（自分で足した日時など）
   const clashes = (start: number, end: number) =>
-    Array.isArray(events) ? events.filter((e) => e.start < end && e.end > start).map((e) => (e.allDay ? `${e.title}（終日）` : e.title)) : [];
+    Array.isArray(events) ? events.filter((e) => e.avoided && e.start < end && e.end > start).map((e) => (e.allDay ? `${e.title}（終日）` : e.title)) : [];
   const warn = (start: number, end: number) => {
     const c = clashes(start, end);
     return c.length ? <div className="clash-warn">⚠️ この時間は{c.slice(0, 3).join("・")}の予定があります</div> : null;

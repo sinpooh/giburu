@@ -3,7 +3,7 @@ name: Deploy
 # main に入ったら Firebase に公開する。Actions 画面の「Run workflow」からも手で実行できる
 on:
   push:
-    branches: [main]
+    branches: [main, claude/mvp-rfz9fq] # 今はこのブランチで作っているので、push したら公開する
   workflow_dispatch:
 
 permissions:

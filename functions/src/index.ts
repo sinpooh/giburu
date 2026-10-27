@@ -227,7 +227,9 @@ export const editSlots = onCall(async (req) => {
   const starts: string[] = Array.isArray(req.data?.starts) ? req.data.starts : [];
   const uniq = [...new Set(starts.map((x) => Date.parse(String(x))).filter((t) => Number.isFinite(t) && t > now))].sort((a, b) => a - b).slice(0, 5);
   if (uniq.length === 0) throw new HttpsError("invalid-argument", "候補を1つ以上入れてください");
-  const slots = uniq.map((t) => ({ start: new Date(t).toISOString(), end: new Date(t + s.durationMin * MIN).toISOString() }));
+  const prev = new Map(((o.get("slots") ?? []) as (Slot & { manual?: boolean })[]).map((x) => [Date.parse(x.start), x]));
+  // 自分で足した日時は manual（予定とかぶっていても、相手が選んだらそのまま取る）
+  const slots = uniq.map((t) => ({ start: new Date(t).toISOString(), end: new Date(t + s.durationMin * MIN).toISOString(), manual: prev.has(t) ? !!prev.get(t)!.manual : true }));
   const oldText: string = card.get("lineText") ?? "";
   const oldSlots: Slot[] = o.get("slots") ?? [];
   const lineText = oldText.includes(slotsText(oldSlots)) ? oldText.replace(slotsText(oldSlots), slotsText(slots)) : oldText;
@@ -389,7 +391,7 @@ export const confirmBooking = onCall(async (req) => {
   const index = Number(req.data?.index);
   if (!o) throw new HttpsError("not-found", "リンクが見つかりません");
   const s = await getSettings();
-  const slots: (Slot & { taken?: boolean })[] = o.get("slots") ?? [];
+  const slots: (Slot & { taken?: boolean; manual?: boolean })[] = o.get("slots") ?? [];
   const picked = slots[index];
   if (!picked || picked.taken) throw new HttpsError("invalid-argument", "その枠は選べません");
   const format: MeetFormat = MEET_FORMATS.includes(req.data?.format) ? req.data.format : "store";
@@ -404,7 +406,8 @@ export const confirmBooking = onCall(async (req) => {
   const start = Date.parse(slot.start);
   const end = start + Math.max(s.durationMin, s.holdMin) * MIN;
   const cal = await busyIntervals(new Date(start - pad), new Date(end + pad));
-  if (cal && cal.some((b) => b.start < end + pad && b.end > start - pad)) {
+  // 青山さんが自分で入れた日時は、予定があっても「別の人で対応できる」前提でそのまま取る（2026-10-27）
+  if (!picked.manual && cal && cal.some((b) => b.start < end + pad && b.end > start - pad)) {
     slots[index] = { ...picked, taken: true };
     await o.ref.update({ slots });
     return { ok: false, reason: "taken" };

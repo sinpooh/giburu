@@ -59,7 +59,7 @@ export function AvoidedEvents({ onClose }: { onClose: () => void }) {
         ))}
         {data?.connected && (
           <p className="small muted">
-            「予定なし（空き）」にしている予定も含めて、ここに出ている予定はすべてよけています。
+            「予定なし（空き）」にしている予定もよけます。終日の予定はメモ扱いなのでよけません。
             ここに出ていない予定（つないだアカウントに共有されていないカレンダーの予定）はよけていません。
           </p>
         )}
